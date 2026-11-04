@@ -3,7 +3,7 @@
 | Step | Description | Status | Commit |
 |---|---|---|---|
 | P0 | Membaca spesifikasi baseline v1.3 dan membuat dokumentasi pemahaman serta scaffolding docs | Selesai | 06bcf7428cc54beeeb13c3b6abe21b3a1d28ffe9 |
-| P1 | Server skeleton: packaging, settings, SQLite engine, FastAPI health endpoint, dan Alembic environment | DONE | <sha> |
+| P1 | Server skeleton: packaging, settings, SQLite engine, FastAPI health endpoint, dan Alembic environment | DONE | 766145683b6025a4b4cad756cf8fd41e00a199b6 |
 | P2 | Server core, database schema, device auth, ledger, dan allowance | Belum dimulai | — |
 | P3 | WebSocket, remote binding, dan offline sync | Belum dimulai | — |
 | P4 | Admin WebUI (tahap 3a dan 3b sesuai Section 18) | Belum dimulai | — |

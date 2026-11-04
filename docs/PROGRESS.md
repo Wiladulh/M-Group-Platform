@@ -26,7 +26,7 @@
 ## Catatan P1.5
 
 - Commit implementasi CI dengan kedua job green: `2854c7a2b9fc9f7034e0bb1b01234a682c7063f0`.
-- GitHub Actions run: [CI #5](https://github.com/Wiladulh/M-Group-Platform/actions/runs/41759283719).
+- GitHub Actions run: [CI run 41759283719](https://github.com/Wiladulh/M-Group-Platform/actions/runs/41759283719).
 - Job `Ruff`: success, durasi 16 detik (02:13:30–02:13:46 UTC).
 - Job `Pytest`: success, durasi 17 detik (02:13:30–02:13:47 UTC).
 - Pytest menjalankan dua tes: health endpoint dan smoke test import seluruh modul di `app/`.

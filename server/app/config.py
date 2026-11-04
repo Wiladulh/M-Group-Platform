@@ -3,6 +3,7 @@
 import base64
 import binascii
 from functools import lru_cache
+
 from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 

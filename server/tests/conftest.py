@@ -1,8 +1,18 @@
-# Minimal fixtures. Expand in later phases.
-# We intentionally avoid spinning up a real DB or server here; P1.5 only
-# needs to prove that imports work and /healthz responds.
+# Test-only configuration. Generate an isolated encryption key for each pytest run.
+import base64
+import os
+import secrets
+
 import pytest
 from fastapi.testclient import TestClient
+
+
+# Set this while conftest is imported, before test modules import application settings.
+# setdefault preserves an explicitly supplied key for specialized test runs.
+os.environ.setdefault(
+    "DATA_KEY",
+    base64.urlsafe_b64encode(secrets.token_bytes(32)).decode(),
+)
 
 
 @pytest.fixture(scope="session")

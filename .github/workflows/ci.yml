@@ -56,5 +56,4 @@ jobs:
           ADMIN_USERNAME: admin
           ADMIN_PASSWORD: ci-not-used-yet
           PIN_PEPPER: ci-pepper-placeholder
-          DATA_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
         run: pytest

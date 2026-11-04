@@ -3,8 +3,8 @@ import base64
 import os
 import secrets
 
-import pytest
 from fastapi.testclient import TestClient
+import pytest
 
 
 # Set this while conftest is imported, before test modules import application settings.

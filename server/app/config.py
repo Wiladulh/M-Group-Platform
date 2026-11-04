@@ -13,7 +13,7 @@ class Settings(BaseSettings):
 
     admin_username: str = "admin"
     admin_password: SecretStr = SecretStr("local-dev-change-this-password")
-    data_key: SecretStr = SecretStr("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
+    data_key: SecretStr = SecretStr("CHANGE_ME_BASE64_OF_32_RANDOM_BYTES")
     pin_pepper: SecretStr = SecretStr("local-development-pin-pepper-change-me")
     app_version: str = "1.3.0"
     enable_api_docs: bool = True
@@ -30,10 +30,11 @@ class Settings(BaseSettings):
     @field_validator("data_key")
     @classmethod
     def validate_data_key(cls, value: SecretStr) -> SecretStr:
-        """Require DATA_KEY to be valid base64 encoding of exactly 32 bytes."""
+        """Require standard or URL-safe Base64 encoding of exactly 32 bytes."""
         encoded = value.get_secret_value()
+        normalized = encoded.translate(str.maketrans("-_", "+/"))
         try:
-            decoded = base64.b64decode(encoded, validate=True)
+            decoded = base64.b64decode(normalized, validate=True)
         except (binascii.Error, ValueError) as exc:
             raise ValueError("DATA_KEY must be valid base64") from exc
         if len(decoded) != 32:

@@ -32,3 +32,7 @@
 - .env.example dan default Settings.data_key menggunakan placeholder invalid agar aplikasi gagal cepat bila developer belum membuat key rahasia.
 - tests/conftest.py membuat DATA_KEY URL-safe Base64 dari secrets.token_bytes(32) sekali per sesi pytest; setdefault tetap mengizinkan key eksplisit untuk pengujian khusus.
 - Validator Settings menerima alfabet Base64 standar maupun URL-safe, memvalidasi alfabet secara ketat, dan mewajibkan hasil decode tepat 32 byte. Tidak ada key dummy statis pada workflow CI.
+## P3 — Security primitives
+- Argon2id menggunakan `argon2-cffi PasswordHasher(type=Type.ID)` dengan parameter default pustaka (time_cost=3, memory_cost=65536 KiB, parallelism=4, hash_len=32, salt_len=16). Section 4 menetapkan algoritma Argon2id tetapi tidak menentukan angka parameter, sehingga pemakaian default modern bukan penyimpangan dari spesifikasi.
+- `DATA_KEY` dibaca melalui Settings dan divalidasi sebagai Base64 yang mendekode tepat 32 byte; `PIN_PEPPER` merupakan secret independen. Kedua nilai wajib diganti dengan secret produksi dan tidak boleh masuk repository.
+- Dependency `argon2-cffi` dan `cryptography` sudah tersedia di dependencies utama; tidak ada perubahan dependency diperlukan.

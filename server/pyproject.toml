@@ -27,6 +27,7 @@ dependencies = [
 dev = [
     "pytest",
     "pytest-asyncio",
+    "pytest-cov",
     "httpx",
     "ruff",
 ]
@@ -48,4 +49,4 @@ ignore = ["E501"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["."]
-addopts = "-q"
+addopts = "-q --cov=app/security --cov-report=term-missing --cov-fail-under=70"

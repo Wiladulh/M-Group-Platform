@@ -5,7 +5,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker
 
 from app.config import get_settings
-from app.models import Base
+from app.models import Base as Base
 
 settings = get_settings()
 _is_sqlite = settings.database_url.startswith("sqlite")

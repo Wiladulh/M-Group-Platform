@@ -111,6 +111,7 @@ def upgrade() -> None:
         sa.Column("version", sa.Integer(), nullable=False, server_default="0"),
         *_timestamps(),
         sa.CheckConstraint("version >= 0", name="ck_catalog_meta_version"),
+        sa.CheckConstraint("id = 1", name="ck_catalog_meta_singleton"),
     )
     op.create_table(
         "admin_sessions",
@@ -118,6 +119,7 @@ def upgrade() -> None:
         sa.Column("user_id", sa.Integer(), sa.ForeignKey("admin_users.id"), nullable=False),
         sa.Column("session_hash", sa.String(64), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.current_timestamp()),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.current_timestamp()),
         sa.Column("last_seen_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("ip", sa.String(45)),

@@ -2,9 +2,10 @@
 
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy.orm import sessionmaker
 
 from app.config import get_settings
+from app.models import Base
 
 settings = get_settings()
 _is_sqlite = settings.database_url.startswith("sqlite")
@@ -35,7 +36,3 @@ SessionLocal = sessionmaker(
     autocommit=False,
     autoflush=False,
 )
-
-
-class Base(DeclarativeBase):
-    """Base class for future SQLAlchemy models; no tables are declared in P1."""

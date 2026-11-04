@@ -1,6 +1,6 @@
 """Administrator identity and server-side sessions."""
 
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy import DateTime, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column

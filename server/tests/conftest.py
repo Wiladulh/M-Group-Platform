@@ -1,10 +1,9 @@
 # Test-only configuration. Generate an isolated encryption key for each pytest run.
 import base64
+import fastapi.testclient
 import os
-import secrets
-
-from fastapi.testclient import TestClient
 import pytest
+import secrets
 
 
 # Set this while conftest is imported, before test modules import application settings.
@@ -21,5 +20,5 @@ def client():
     # collection errors.
     from app.main import app
 
-    with TestClient(app) as test_client:
+    with fastapi.testclient.TestClient(app) as test_client:
         yield test_client

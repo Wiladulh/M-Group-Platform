@@ -23,10 +23,22 @@ class Transaction(TimestampMixin, Base):
         UniqueConstraint("txn_uuid", name="uq_transactions_txn_uuid"),
         CheckConstraint("amount > 0", name="ck_transactions_amount_positive"),
         CheckConstraint("direction IN ('DEBIT', 'CREDIT')", name="ck_transactions_direction"),
-        CheckConstraint("type IN ('PAYMENT', 'TOPUP', 'REFUND', 'ADJUSTMENT')", name="ck_transactions_type"),
-        CheckConstraint("status IN ('COMPLETED', 'PENDING_DISPENSE', 'DISPENSE_FAILED', 'REVERSED', 'REJECTED')", name="ck_transactions_status"),
-        CheckConstraint("source IN ('ONLINE', 'OFFLINE_SYNC', 'ADMIN')", name="ck_transactions_source"),
-        CheckConstraint("performed_by_type IN ('ADMIN', 'OPERATOR', 'DEVICE', 'SYSTEM')", name="ck_transactions_performed_by_type"),
+        CheckConstraint(
+            "type IN ('PAYMENT', 'TOPUP', 'REFUND', 'ADJUSTMENT')",
+            name="ck_transactions_type",
+        ),
+        CheckConstraint(
+            "status IN ('COMPLETED', 'PENDING_DISPENSE', 'DISPENSE_FAILED', 'REVERSED', 'REJECTED')",
+            name="ck_transactions_status",
+        ),
+        CheckConstraint(
+            "source IN ('ONLINE', 'OFFLINE_SYNC', 'ADMIN')",
+            name="ck_transactions_source",
+        ),
+        CheckConstraint(
+            "performed_by_type IN ('ADMIN', 'OPERATOR', 'DEVICE', 'SYSTEM')",
+            name="ck_transactions_performed_by_type",
+        ),
         Index("ix_transactions_member_occurred_at", "member_id", "occurred_at"),
         Index("ix_transactions_device_occurred_at", "device_id", "occurred_at"),
     )
@@ -50,7 +62,9 @@ class Transaction(TimestampMixin, Base):
     note: Mapped[str | None] = mapped_column(Text)
     performed_by_type: Mapped[str] = mapped_column(String(16), nullable=False)
     performed_by_id: Mapped[str | None] = mapped_column(String(64))
-    card_inactive_at_sync: Mapped[bool] = mapped_column(nullable=False, default=False, server_default="0")
+    card_inactive_at_sync: Mapped[bool] = mapped_column(
+        nullable=False, default=False, server_default="0"
+    )
 
 
 class OfflineAllowance(TimestampMixin, Base):
@@ -77,13 +91,17 @@ class ShortfallRecord(TimestampMixin, Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    txn_uuid: Mapped[str] = mapped_column(ForeignKey("transactions.txn_uuid"), nullable=False, unique=True)
+    txn_uuid: Mapped[str] = mapped_column(
+        ForeignKey("transactions.txn_uuid"), nullable=False, unique=True
+    )
     device_id: Mapped[int] = mapped_column(ForeignKey("devices.id"), nullable=False)
     member_id: Mapped[int] = mapped_column(ForeignKey("members.id"), nullable=False)
     amount: Mapped[int] = mapped_column(Integer, nullable=False)
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     reason: Mapped[str] = mapped_column(String(120), nullable=False)
-    status: Mapped[str] = mapped_column(String(16), nullable=False, default="OPEN", server_default="OPEN")
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="OPEN", server_default="OPEN"
+    )
     resolved_by: Mapped[int | None] = mapped_column(ForeignKey("admin_users.id"))
     resolution_note: Mapped[str | None] = mapped_column(Text)
 
@@ -92,7 +110,10 @@ class PendingSyncLog(TimestampMixin, Base):
     __tablename__ = "pending_sync_log"
     __table_args__ = (
         UniqueConstraint("device_id", "batch_uuid", name="uq_pending_sync_device_batch"),
-        CheckConstraint("total >= 0 AND accepted >= 0 AND rejected >= 0", name="ck_pending_sync_counts"),
+        CheckConstraint(
+            "total >= 0 AND accepted >= 0 AND rejected >= 0",
+            name="ck_pending_sync_counts",
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -113,7 +134,10 @@ class TopUpRequest(TimestampMixin, Base):
         CheckConstraint("amount > 0", name="ck_topup_requests_amount_positive"),
         CheckConstraint("status IN ('COMPLETED', 'REVERSED')", name="ck_topup_requests_status"),
         CheckConstraint("source IN ('WEBUI', 'CASHIER')", name="ck_topup_requests_source"),
-        CheckConstraint("processed_by_type IN ('ADMIN', 'OPERATOR')", name="ck_topup_requests_processed_by_type"),
+        CheckConstraint(
+            "processed_by_type IN ('ADMIN', 'OPERATOR')",
+            name="ck_topup_requests_processed_by_type",
+        ),
         Index("ix_topup_requests_member_created_at", "member_id", "created_at"),
     )
 
@@ -121,7 +145,9 @@ class TopUpRequest(TimestampMixin, Base):
     request_uuid: Mapped[str] = mapped_column(String(36), nullable=False)
     member_id: Mapped[int] = mapped_column(ForeignKey("members.id"), nullable=False)
     amount: Mapped[int] = mapped_column(Integer, nullable=False)
-    status: Mapped[str] = mapped_column(String(16), nullable=False, default="COMPLETED", server_default="COMPLETED")
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="COMPLETED", server_default="COMPLETED"
+    )
     source: Mapped[str] = mapped_column(String(16), nullable=False)
     device_id: Mapped[int | None] = mapped_column(ForeignKey("devices.id"))
     processed_by_type: Mapped[str] = mapped_column(String(16), nullable=False)

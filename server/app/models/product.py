@@ -31,8 +31,14 @@ class VendingSlot(TimestampMixin, Base):
     __table_args__ = (
         UniqueConstraint("device_id", "slot_no", name="uq_vending_slots_device_slot"),
         CheckConstraint("slot_no BETWEEN 1 AND 16", name="ck_vending_slots_slot_no"),
-        CheckConstraint("stock >= 0 AND capacity >= 0 AND stock <= capacity", name="ck_vending_slots_stock_capacity"),
-        CheckConstraint("servo_type IN ('positional', 'continuous')", name="ck_vending_slots_servo_type"),
+        CheckConstraint(
+            "stock >= 0 AND capacity >= 0 AND stock <= capacity",
+            name="ck_vending_slots_stock_capacity",
+        ),
+        CheckConstraint(
+            "servo_type IN ('positional', 'continuous')",
+            name="ck_vending_slots_servo_type",
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)

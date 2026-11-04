@@ -12,11 +12,25 @@ from sqlalchemy.pool import StaticPool
 SERVER_DIR = Path(__file__).resolve().parents[1]
 ALEMBIC_INI = SERVER_DIR / "alembic.ini"
 EXPECTED_TABLES = {
-    "admin_users", "admin_sessions", "members", "cards", "devices",
-    "device_events", "products", "vending_slots", "catalog_meta",
-    "transactions", "offline_allowances", "shortfall_records",
-    "pending_sync_log", "card_bind_sessions", "operators",
-    "operator_devices", "topup_requests", "audit_logs", "settings",
+    "admin_users",
+    "admin_sessions",
+    "members",
+    "cards",
+    "devices",
+    "device_events",
+    "products",
+    "vending_slots",
+    "catalog_meta",
+    "transactions",
+    "offline_allowances",
+    "shortfall_records",
+    "pending_sync_log",
+    "card_bind_sessions",
+    "operators",
+    "operator_devices",
+    "topup_requests",
+    "audit_logs",
+    "settings",
 }
 
 

@@ -35,7 +35,9 @@ class Member(TimestampMixin, Base):
     nik_idx: Mapped[str] = mapped_column(String(64), nullable=False)
     phone: Mapped[str | None] = mapped_column(String(32))
     balance: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
-    status: Mapped[str] = mapped_column(String(16), nullable=False, default="ACTIVE", server_default="ACTIVE")
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="ACTIVE", server_default="ACTIVE"
+    )
     notes: Mapped[str | None] = mapped_column(Text)
 
 
@@ -43,10 +45,18 @@ class Card(TimestampMixin, Base):
     __tablename__ = "cards"
     __table_args__ = (
         UniqueConstraint("uid", name="uq_cards_uid"),
-        CheckConstraint("status IN ('ACTIVE', 'INACTIVE', 'LOCKED', 'REPLACED')", name="ck_cards_status"),
+        CheckConstraint(
+            "status IN ('ACTIVE', 'INACTIVE', 'LOCKED', 'REPLACED')",
+            name="ck_cards_status",
+        ),
         CheckConstraint("pin_fail_count >= 0", name="ck_cards_pin_fail_count"),
         Index("ix_cards_uid", "uid"),
-        Index("uq_cards_one_active_or_locked_per_member", "member_id", unique=True, sqlite_where=text("status IN ('ACTIVE', 'LOCKED')")),
+        Index(
+            "uq_cards_one_active_or_locked_per_member",
+            "member_id",
+            unique=True,
+            sqlite_where=text("status IN ('ACTIVE', 'LOCKED')"),
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -55,8 +65,12 @@ class Card(TimestampMixin, Base):
     pin_hash: Mapped[str] = mapped_column(Text, nullable=False)
     offline_verifier: Mapped[str | None] = mapped_column(Text)
     offline_salt: Mapped[str | None] = mapped_column(String(128))
-    pin_fail_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
-    status: Mapped[str] = mapped_column(String(16), nullable=False, default="ACTIVE", server_default="ACTIVE")
+    pin_fail_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="ACTIVE", server_default="ACTIVE"
+    )
     bound_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     bound_by_device_id: Mapped[int | None] = mapped_column(ForeignKey("devices.id"))
     deactivated_reason: Mapped[str | None] = mapped_column(Text)

@@ -28,14 +28,20 @@ class Operator(TimestampMixin, Base):
     operator_no: Mapped[int] = mapped_column(Integer, nullable=False)
     nama: Mapped[str] = mapped_column(String(160), nullable=False)
     operator_pin_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    pin_fail_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    pin_fail_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
     locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="1")
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="1"
+    )
 
 
 class OperatorDevice(TimestampMixin, Base):
     __tablename__ = "operator_devices"
-    __table_args__ = (UniqueConstraint("operator_id", "device_id", name="uq_operator_devices_operator_device"),)
+    __table_args__ = (
+        UniqueConstraint("operator_id", "device_id", name="uq_operator_devices_operator_device"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     operator_id: Mapped[int] = mapped_column(ForeignKey("operators.id"), nullable=False)

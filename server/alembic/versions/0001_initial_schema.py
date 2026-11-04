@@ -169,6 +169,10 @@ def upgrade() -> None:
             "status IN ('ACTIVE', 'INACTIVE', 'LOCKED', 'REPLACED')",
             name="ck_cards_status",
         ),
+        sa.CheckConstraint(
+            "length(uid) IN (8, 14, 20) AND uid = upper(uid) AND uid NOT GLOB '*[^0-9A-F]*'",
+            name="ck_cards_uid_hex_format",
+        ),
         sa.CheckConstraint("pin_fail_count >= 0", name="ck_cards_pin_fail_count"),
     )
     op.create_table(

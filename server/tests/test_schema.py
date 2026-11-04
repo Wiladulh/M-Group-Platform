@@ -109,6 +109,38 @@ def test_alembic_downgrade_base_removes_schema() -> None:
         engine.dispose()
 
 
+def test_member_code_format_is_enforced(schema_engine) -> None:
+    with schema_engine.connect() as connection:
+        transaction = connection.begin()
+        with pytest.raises(IntegrityError):
+            connection.execute(
+                text(
+                    """
+                    INSERT INTO members (member_code, full_name, nik_enc, nik_idx, balance, status)
+                    VALUES ('INVALID-1', 'Anggota Uji', 'enc', 'idx', 0, 'ACTIVE')
+                    """
+                )
+            )
+        transaction.rollback()
+
+
+def test_card_uid_requires_supported_uppercase_hex(schema_engine) -> None:
+    with schema_engine.connect() as connection:
+        transaction = connection.begin()
+        member_id = insert_member(connection)
+        with pytest.raises(IntegrityError):
+            connection.execute(
+                text(
+                    """
+                    INSERT INTO cards (member_id, uid, pin_hash, status)
+                    VALUES (:member_id, '04g1', 'argon-hash', 'ACTIVE')
+                    """
+                ),
+                {"member_id": member_id},
+            )
+        transaction.rollback()
+
+
 def test_members_reject_negative_balance(schema_engine) -> None:
     with schema_engine.connect() as connection:
         transaction = connection.begin()

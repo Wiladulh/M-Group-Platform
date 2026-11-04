@@ -23,7 +23,7 @@ class Product(TimestampMixin, Base):
     image_hash: Mapped[str | None] = mapped_column(String(8))
     image_sha256: Mapped[str | None] = mapped_column(String(64))
     image_size: Mapped[int | None] = mapped_column(Integer)
-    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="1")
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
 
 class VendingSlot(TimestampMixin, Base):
@@ -39,18 +39,21 @@ class VendingSlot(TimestampMixin, Base):
     device_id: Mapped[int] = mapped_column(ForeignKey("devices.id"), nullable=False)
     slot_no: Mapped[int] = mapped_column(Integer, nullable=False)
     product_id: Mapped[int | None] = mapped_column(ForeignKey("products.id"))
-    stock: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
-    capacity: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
-    servo_type: Mapped[str] = mapped_column(String(16), nullable=False, default="positional", server_default="positional")
-    home_deg: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
-    dispense_deg: Mapped[int] = mapped_column(Integer, nullable=False, default=90, server_default="90")
-    hold_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=700, server_default="700")
-    run_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    stock: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    capacity: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    servo_type: Mapped[str] = mapped_column(String(16), nullable=False, default="positional")
+    home_deg: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    dispense_deg: Mapped[int] = mapped_column(Integer, nullable=False, default=90)
+    hold_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=700)
+    run_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
 
 class CatalogMeta(TimestampMixin, Base):
     __tablename__ = "catalog_meta"
-    __table_args__ = (CheckConstraint("version >= 0", name="ck_catalog_meta_version"),)
+    __table_args__ = (
+        CheckConstraint("version >= 0", name="ck_catalog_meta_version"),
+        CheckConstraint("id = 1", name="ck_catalog_meta_singleton"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    version: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

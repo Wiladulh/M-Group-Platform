@@ -41,6 +41,7 @@ def upgrade() -> None:
         sa.Column("last_login_at", sa.DateTime(timezone=True)),
         *_timestamps(),
         sa.UniqueConstraint("username", name="uq_admin_users_username"),
+        sa.CheckConstraint("id = 1", name="ck_admin_users_singleton"),
     )
     op.create_table(
         "members",

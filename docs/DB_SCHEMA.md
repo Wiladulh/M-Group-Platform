@@ -13,7 +13,7 @@ Skema ini mengikuti Section 5 spesifikasi M-Group Platform v1.3. Seluruh nominal
 ## Identity — admin, member, kartu
 
 ### admin_users
-Akun tunggal pemilik WebUI. Kolom: id, username VARCHAR(80), display_name VARCHAR(160), password_hash TEXT, must_change_password BOOLEAN, last_login_at DATETIME nullable, created_at, updated_at. Constraint: username UNIQUE.
+Akun tunggal pemilik WebUI. Kolom: id, username VARCHAR(80), display_name VARCHAR(160), password_hash TEXT, must_change_password BOOLEAN, last_login_at DATETIME nullable, created_at, updated_at. Constraint: username UNIQUE dan CHECK(id = 1), sehingga hanya satu akun admin yang dapat tersimpan.
 
 ### admin_sessions
 Session cookie tersimpan sebagai hash. Kolom: id, user_id FK admin_users.id, session_hash VARCHAR(64), created_at, updated_at, last_seen_at, expires_at, ip VARCHAR(45) nullable, user_agent TEXT nullable, revoked_at nullable. Constraint: session_hash UNIQUE. Index eksplisit: ix_admin_sessions_session_hash.

@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, Text, UniqueConstraint
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin, utc_now
@@ -10,7 +10,10 @@ from app.models.base import Base, TimestampMixin, utc_now
 
 class AdminUser(TimestampMixin, Base):
     __tablename__ = "admin_users"
-    __table_args__ = (UniqueConstraint("username", name="uq_admin_users_username"),)
+    __table_args__ = (
+        UniqueConstraint("username", name="uq_admin_users_username"),
+        CheckConstraint("id = 1", name="ck_admin_users_singleton"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     username: Mapped[str] = mapped_column(String(80), nullable=False)

@@ -24,6 +24,10 @@ class Member(TimestampMixin, Base):
         UniqueConstraint("member_code", name="uq_members_member_code"),
         UniqueConstraint("nik_idx", name="uq_members_nik_idx"),
         CheckConstraint("balance >= 0", name="ck_members_balance_nonnegative"),
+        CheckConstraint(
+            "member_code GLOB 'MG-[A-Z][0-9][0-9][0-9][0-9][0-9]' AND CAST(substr(member_code, 5) AS INTEGER) BETWEEN 1 AND 99999",
+            name="ck_members_member_code_format",
+        ),
         CheckConstraint("status IN ('ACTIVE', 'SUSPENDED')", name="ck_members_status"),
         Index("ix_members_nik_idx", "nik_idx"),
     )

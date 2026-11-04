@@ -58,6 +58,10 @@ def upgrade() -> None:
         sa.UniqueConstraint("member_code", name="uq_members_member_code"),
         sa.UniqueConstraint("nik_idx", name="uq_members_nik_idx"),
         sa.CheckConstraint("balance >= 0", name="ck_members_balance_nonnegative"),
+        sa.CheckConstraint(
+            "member_code GLOB 'MG-[A-Z][0-9][0-9][0-9][0-9][0-9]' AND CAST(substr(member_code, 5) AS INTEGER) BETWEEN 1 AND 99999",
+            name="ck_members_member_code_format",
+        ),
         sa.CheckConstraint("status IN ('ACTIVE', 'SUSPENDED')", name="ck_members_status"),
     )
     op.create_table(

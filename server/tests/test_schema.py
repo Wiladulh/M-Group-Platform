@@ -2,9 +2,9 @@
 
 from pathlib import Path
 
-import pytest
 from alembic import command
 from alembic.config import Config
+import pytest
 from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.pool import StaticPool

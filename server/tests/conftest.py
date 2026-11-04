@@ -6,7 +6,6 @@ import secrets
 import fastapi.testclient
 import pytest
 
-
 # Set this while conftest is imported, before test modules import application settings.
 # setdefault preserves an explicitly supplied key for specialized test runs.
 os.environ.setdefault(

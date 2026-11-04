@@ -5,7 +5,7 @@
 | P1.5 | CI setup: Ruff + pytest config, minimal health/import tests, GitHub Actions workflow (lint + test jobs both green) | DONE | 2854c7a2b9fc9f7034e0bb1b01234a682c7063f0 |
 | P0 | Membaca spesifikasi baseline v1.3 dan membuat dokumentasi pemahaman serta scaffolding docs | Selesai | 06bcf7428cc54beeeb13c3b6abe21b3a1d28ffe9 |
 | P1 | Server skeleton: packaging, settings, SQLite engine, FastAPI health endpoint, dan Alembic environment | DONE | 766145683b6025a4b4cad756cf8fd41e00a199b6 |
-| P2 | Server core, database schema, device auth, ledger, dan allowance | Belum dimulai | — |
+| P2 | Full database schema + migration: 19 SQLAlchemy models, Alembic revision 0001, constraints/indexes, schema tests dan DB_SCHEMA.md | DONE | 31405495385b7f3aa792ece0b036a0015d8d3eed |
 | P3 | WebSocket, remote binding, dan offline sync | Belum dimulai | — |
 | P4 | Admin WebUI (tahap 3a dan 3b sesuai Section 18) | Belum dimulai | — |
 | P5 | firmware-common dan native tests | Belum dimulai | — |
@@ -31,3 +31,13 @@
 - Job `Pytest`: success, durasi 17 detik (02:13:30–02:13:47 UTC).
 - Pytest menjalankan dua tes: health endpoint dan smoke test import seluruh modul di `app/`.
 - Catatan deviasi dan penyesuaian P1.5 tercantum pada bagian P1.5 di `ASSUMPTIONS.md`.
+
+## Catatan P2
+
+- Implementasi schema/model dan migration revision 0001: commit `31405495385b7f3aa792ece0b036a0015d8d3eed`.
+- Green CI run untuk commit tersebut: [CI run 41762822003](https://github.com/Wiladulh/M-Group-Platform/actions/runs/41762822003).
+- Job `Pytest`: SUCCESS, 22 detik; job `Ruff`: SUCCESS, 19 detik.
+- `server/tests/test_schema.py`: 5 pengujian lulus (upgrade, downgrade, saldo negatif, partial unique kartu aktif/terkunci, dan amount transaksi positif). Total suite CI: 7 passed, 1 warning dari deprecation Starlette TestClient/httpx.
+- Migration membentuk 19 tabel dan 7 indeks eksplisit, termasuk partial unique index kartu ACTIVE/LOCKED.
+- SQLite pragmas pada engine aplikasi diverifikasi: foreign_keys=ON, busy_timeout=5000, journal_mode=WAL per koneksi.
+- P2 ini hanya menyelesaikan schema dan migration. Router, service, device auth, ledger business logic, dan allowance logic belum dibuat; itu tetap berada pada fase berikutnya.

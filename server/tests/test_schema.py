@@ -9,7 +9,6 @@ from sqlalchemy import create_engine, event, inspect, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.pool import StaticPool
 
-
 SERVER_DIR = Path(__file__).resolve().parents[1]
 ALEMBIC_INI = SERVER_DIR / "alembic.ini"
 EXPECTED_TABLES = {

@@ -12,8 +12,14 @@ class CardBindSession(TimestampMixin, Base):
     __tablename__ = "card_bind_sessions"
     __table_args__ = (
         UniqueConstraint("session_uuid", name="uq_card_bind_sessions_session_uuid"),
-        CheckConstraint("mode IN ('NEW_CARD', 'REPLACE_CARD', 'PIN_ONLY')", name="ck_card_bind_sessions_mode"),
-        CheckConstraint("state IN ('WAITING_DEVICE', 'WAITING_CARD', 'WAITING_PIN', 'CONFIRM_PIN', 'DONE', 'FAILED', 'EXPIRED', 'CANCELLED')", name="ck_card_bind_sessions_state"),
+        CheckConstraint(
+            "mode IN ('NEW_CARD', 'REPLACE_CARD', 'PIN_ONLY')",
+            name="ck_card_bind_sessions_mode",
+        ),
+        CheckConstraint(
+            "state IN ('WAITING_DEVICE', 'WAITING_CARD', 'WAITING_PIN', 'CONFIRM_PIN', 'DONE', 'FAILED', 'EXPIRED', 'CANCELLED')",
+            name="ck_card_bind_sessions_state",
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)

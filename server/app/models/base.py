@@ -19,7 +19,10 @@ class TimestampMixin:
     """Add UTC creation and update timestamps to a mapped table."""
 
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=utc_now, server_default=func.current_timestamp()
+        DateTime(timezone=True),
+        nullable=False,
+        default=utc_now,
+        server_default=func.current_timestamp(),
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

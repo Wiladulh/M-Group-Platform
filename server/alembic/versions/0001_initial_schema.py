@@ -15,8 +15,18 @@ depends_on = None
 
 def _timestamps():
     return [
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.current_timestamp()),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.current_timestamp()),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.current_timestamp(),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.current_timestamp(),
+        ),
     ]
 
 
@@ -69,7 +79,10 @@ def upgrade() -> None:
         sa.Column("config_json", sa.Text()),
         *_timestamps(),
         sa.CheckConstraint("type IN ('cashier', 'vending')", name="ck_devices_type"),
-        sa.CheckConstraint("reported_mode IS NULL OR reported_mode IN ('manual', 'scanner', 'vending')", name="ck_devices_reported_mode"),
+        sa.CheckConstraint(
+            "reported_mode IS NULL OR reported_mode IN ('manual', 'scanner', 'vending')",
+            name="ck_devices_reported_mode",
+        ),
         sa.CheckConstraint("status IN ('ACTIVE', 'REVOKED')", name="ck_devices_status"),
         sa.CheckConstraint("slot_count BETWEEN 0 AND 16", name="ck_devices_slot_count"),
     )
@@ -141,7 +154,10 @@ def upgrade() -> None:
         sa.Column("deactivated_reason", sa.Text()),
         *_timestamps(),
         sa.UniqueConstraint("uid", name="uq_cards_uid"),
-        sa.CheckConstraint("status IN ('ACTIVE', 'INACTIVE', 'LOCKED', 'REPLACED')", name="ck_cards_status"),
+        sa.CheckConstraint(
+            "status IN ('ACTIVE', 'INACTIVE', 'LOCKED', 'REPLACED')",
+            name="ck_cards_status",
+        ),
         sa.CheckConstraint("pin_fail_count >= 0", name="ck_cards_pin_fail_count"),
     )
     op.create_table(
@@ -153,8 +169,14 @@ def upgrade() -> None:
         sa.Column("duration_s", sa.Integer()),
         sa.Column("detail", sa.Text()),
         *_timestamps(),
-        sa.CheckConstraint("event IN ('ONLINE', 'OFFLINE', 'REBOOT', 'WIFI_RECONNECT')", name="ck_device_events_event"),
-        sa.CheckConstraint("duration_s IS NULL OR duration_s >= 0", name="ck_device_events_duration"),
+        sa.CheckConstraint(
+            "event IN ('ONLINE', 'OFFLINE', 'REBOOT', 'WIFI_RECONNECT')",
+            name="ck_device_events_event",
+        ),
+        sa.CheckConstraint(
+            "duration_s IS NULL OR duration_s >= 0",
+            name="ck_device_events_duration",
+        ),
     )
     op.create_table(
         "vending_slots",
@@ -172,8 +194,14 @@ def upgrade() -> None:
         *_timestamps(),
         sa.UniqueConstraint("device_id", "slot_no", name="uq_vending_slots_device_slot"),
         sa.CheckConstraint("slot_no BETWEEN 1 AND 16", name="ck_vending_slots_slot_no"),
-        sa.CheckConstraint("stock >= 0 AND capacity >= 0 AND stock <= capacity", name="ck_vending_slots_stock_capacity"),
-        sa.CheckConstraint("servo_type IN ('positional', 'continuous')", name="ck_vending_slots_servo_type"),
+        sa.CheckConstraint(
+            "stock >= 0 AND capacity >= 0 AND stock <= capacity",
+            name="ck_vending_slots_stock_capacity",
+        ),
+        sa.CheckConstraint(
+            "servo_type IN ('positional', 'continuous')",
+            name="ck_vending_slots_servo_type",
+        ),
     )
     op.create_table(
         "transactions",
@@ -201,10 +229,22 @@ def upgrade() -> None:
         sa.UniqueConstraint("txn_uuid", name="uq_transactions_txn_uuid"),
         sa.CheckConstraint("amount > 0", name="ck_transactions_amount_positive"),
         sa.CheckConstraint("direction IN ('DEBIT', 'CREDIT')", name="ck_transactions_direction"),
-        sa.CheckConstraint("type IN ('PAYMENT', 'TOPUP', 'REFUND', 'ADJUSTMENT')", name="ck_transactions_type"),
-        sa.CheckConstraint("status IN ('COMPLETED', 'PENDING_DISPENSE', 'DISPENSE_FAILED', 'REVERSED', 'REJECTED')", name="ck_transactions_status"),
-        sa.CheckConstraint("source IN ('ONLINE', 'OFFLINE_SYNC', 'ADMIN')", name="ck_transactions_source"),
-        sa.CheckConstraint("performed_by_type IN ('ADMIN', 'OPERATOR', 'DEVICE', 'SYSTEM')", name="ck_transactions_performed_by_type"),
+        sa.CheckConstraint(
+            "type IN ('PAYMENT', 'TOPUP', 'REFUND', 'ADJUSTMENT')",
+            name="ck_transactions_type",
+        ),
+        sa.CheckConstraint(
+            "status IN ('COMPLETED', 'PENDING_DISPENSE', 'DISPENSE_FAILED', 'REVERSED', 'REJECTED')",
+            name="ck_transactions_status",
+        ),
+        sa.CheckConstraint(
+            "source IN ('ONLINE', 'OFFLINE_SYNC', 'ADMIN')",
+            name="ck_transactions_source",
+        ),
+        sa.CheckConstraint(
+            "performed_by_type IN ('ADMIN', 'OPERATOR', 'DEVICE', 'SYSTEM')",
+            name="ck_transactions_performed_by_type",
+        ),
     )
     op.create_table(
         "offline_allowances",
@@ -222,7 +262,9 @@ def upgrade() -> None:
     op.create_table(
         "shortfall_records",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("txn_uuid", sa.String(36), sa.ForeignKey("transactions.txn_uuid"), nullable=False),
+        sa.Column(
+            "txn_uuid", sa.String(36), sa.ForeignKey("transactions.txn_uuid"), nullable=False
+        ),
         sa.Column("device_id", sa.Integer(), sa.ForeignKey("devices.id"), nullable=False),
         sa.Column("member_id", sa.Integer(), sa.ForeignKey("members.id"), nullable=False),
         sa.Column("amount", sa.Integer(), nullable=False),
@@ -248,7 +290,10 @@ def upgrade() -> None:
         sa.Column("detail_json", sa.Text()),
         *_timestamps(),
         sa.UniqueConstraint("device_id", "batch_uuid", name="uq_pending_sync_device_batch"),
-        sa.CheckConstraint("total >= 0 AND accepted >= 0 AND rejected >= 0", name="ck_pending_sync_counts"),
+        sa.CheckConstraint(
+            "total >= 0 AND accepted >= 0 AND rejected >= 0",
+            name="ck_pending_sync_counts",
+        ),
     )
     op.create_table(
         "card_bind_sessions",
@@ -260,12 +305,20 @@ def upgrade() -> None:
         sa.Column("state", sa.String(24), nullable=False),
         sa.Column("uid_scanned", sa.String(32)),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("created_by_admin_id", sa.Integer(), sa.ForeignKey("admin_users.id"), nullable=False),
+        sa.Column(
+            "created_by_admin_id", sa.Integer(), sa.ForeignKey("admin_users.id"), nullable=False
+        ),
         sa.Column("failure_reason", sa.Text()),
         *_timestamps(),
         sa.UniqueConstraint("session_uuid", name="uq_card_bind_sessions_session_uuid"),
-        sa.CheckConstraint("mode IN ('NEW_CARD', 'REPLACE_CARD', 'PIN_ONLY')", name="ck_card_bind_sessions_mode"),
-        sa.CheckConstraint("state IN ('WAITING_DEVICE', 'WAITING_CARD', 'WAITING_PIN', 'CONFIRM_PIN', 'DONE', 'FAILED', 'EXPIRED', 'CANCELLED')", name="ck_card_bind_sessions_state"),
+        sa.CheckConstraint(
+            "mode IN ('NEW_CARD', 'REPLACE_CARD', 'PIN_ONLY')",
+            name="ck_card_bind_sessions_mode",
+        ),
+        sa.CheckConstraint(
+            "state IN ('WAITING_DEVICE', 'WAITING_CARD', 'WAITING_PIN', 'CONFIRM_PIN', 'DONE', 'FAILED', 'EXPIRED', 'CANCELLED')",
+            name="ck_card_bind_sessions_state",
+        ),
     )
     op.create_table(
         "operator_devices",
@@ -296,7 +349,10 @@ def upgrade() -> None:
         sa.CheckConstraint("amount > 0", name="ck_topup_requests_amount_positive"),
         sa.CheckConstraint("status IN ('COMPLETED', 'REVERSED')", name="ck_topup_requests_status"),
         sa.CheckConstraint("source IN ('WEBUI', 'CASHIER')", name="ck_topup_requests_source"),
-        sa.CheckConstraint("processed_by_type IN ('ADMIN', 'OPERATOR')", name="ck_topup_requests_processed_by_type"),
+        sa.CheckConstraint(
+            "processed_by_type IN ('ADMIN', 'OPERATOR')",
+            name="ck_topup_requests_processed_by_type",
+        ),
     )
     op.create_table(
         "audit_logs",
@@ -320,11 +376,17 @@ def upgrade() -> None:
         sa.UniqueConstraint("key", name="uq_settings_key"),
     )
 
-    op.create_index("ix_transactions_member_occurred_at", "transactions", ["member_id", "occurred_at"])
-    op.create_index("ix_transactions_device_occurred_at", "transactions", ["device_id", "occurred_at"])
+    op.create_index(
+        "ix_transactions_member_occurred_at", "transactions", ["member_id", "occurred_at"]
+    )
+    op.create_index(
+        "ix_transactions_device_occurred_at", "transactions", ["device_id", "occurred_at"]
+    )
     op.create_index("ix_cards_uid", "cards", ["uid"])
     op.create_index("ix_members_nik_idx", "members", ["nik_idx"])
-    op.create_index("ix_topup_requests_member_created_at", "topup_requests", ["member_id", "created_at"])
+    op.create_index(
+        "ix_topup_requests_member_created_at", "topup_requests", ["member_id", "created_at"]
+    )
     op.create_index("ix_admin_sessions_session_hash", "admin_sessions", ["session_hash"])
     op.create_index(
         "uq_cards_one_active_or_locked_per_member",

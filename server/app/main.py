@@ -3,7 +3,6 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-
 from app.config import get_settings
 from app.db import engine
 

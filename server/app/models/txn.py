@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -18,6 +18,8 @@ class Transaction(TimestampMixin, Base):
         CheckConstraint("status IN ('COMPLETED', 'PENDING_DISPENSE', 'DISPENSE_FAILED', 'REVERSED', 'REJECTED')", name="ck_transactions_status"),
         CheckConstraint("source IN ('ONLINE', 'OFFLINE_SYNC', 'ADMIN')", name="ck_transactions_source"),
         CheckConstraint("performed_by_type IN ('ADMIN', 'OPERATOR', 'DEVICE', 'SYSTEM')", name="ck_transactions_performed_by_type"),
+        Index("ix_transactions_member_occurred_at", "member_id", "occurred_at"),
+        Index("ix_transactions_device_occurred_at", "device_id", "occurred_at"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -103,6 +105,7 @@ class TopUpRequest(TimestampMixin, Base):
         CheckConstraint("status IN ('COMPLETED', 'REVERSED')", name="ck_topup_requests_status"),
         CheckConstraint("source IN ('WEBUI', 'CASHIER')", name="ck_topup_requests_source"),
         CheckConstraint("processed_by_type IN ('ADMIN', 'OPERATOR')", name="ck_topup_requests_processed_by_type"),
+        Index("ix_topup_requests_member_created_at", "member_id", "created_at"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)

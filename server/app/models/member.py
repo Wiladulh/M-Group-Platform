@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -15,6 +15,7 @@ class Member(TimestampMixin, Base):
         UniqueConstraint("nik_idx", name="uq_members_nik_idx"),
         CheckConstraint("balance >= 0", name="ck_members_balance_nonnegative"),
         CheckConstraint("status IN ('ACTIVE', 'SUSPENDED')", name="ck_members_status"),
+        Index("ix_members_nik_idx", "nik_idx"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -34,6 +35,8 @@ class Card(TimestampMixin, Base):
         UniqueConstraint("uid", name="uq_cards_uid"),
         CheckConstraint("status IN ('ACTIVE', 'INACTIVE', 'LOCKED', 'REPLACED')", name="ck_cards_status"),
         CheckConstraint("pin_fail_count >= 0", name="ck_cards_pin_fail_count"),
+        Index("ix_cards_uid", "uid"),
+        Index("uq_cards_one_active_or_locked_per_member", "member_id", unique=True, sqlite_where=text("status IN ('ACTIVE', 'LOCKED')")),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)

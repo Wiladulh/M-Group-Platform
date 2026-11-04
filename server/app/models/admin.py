@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, Index, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin, utc_now
@@ -22,7 +22,10 @@ class AdminUser(TimestampMixin, Base):
 
 class AdminSession(TimestampMixin, Base):
     __tablename__ = "admin_sessions"
-    __table_args__ = (UniqueConstraint("session_hash", name="uq_admin_sessions_session_hash"),)
+    __table_args__ = (
+        UniqueConstraint("session_hash", name="uq_admin_sessions_session_hash"),
+        Index("ix_admin_sessions_session_hash", "session_hash"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("admin_users.id"), nullable=False)

@@ -3,8 +3,8 @@
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
-from app.config import get_settings
 
+from app.config import get_settings
 
 settings = get_settings()
 _is_sqlite = settings.database_url.startswith("sqlite")

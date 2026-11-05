@@ -7,7 +7,6 @@ from contextlib import redirect_stdout
 from io import StringIO
 
 import pytest
-
 from app.models import Base, Member, Transaction
 from app.services.ledger import (
     IdempotencyConflict,

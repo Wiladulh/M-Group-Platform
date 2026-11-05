@@ -184,9 +184,10 @@ def test_settings_helpers_cast_upsert_and_list(tmp_path):
             assert get_setting(session, "offline_txn_max", 0) == 30000
             set_setting(session, "offline_txn_max", 25000)
         with factory() as session:
-            assert session.scalar(
-                select(Setting.value).where(Setting.key == "offline_txn_max")
-            ) == "25000"
+            assert (
+                session.scalar(select(Setting.value).where(Setting.key == "offline_txn_max"))
+                == "25000"
+            )
             assert get_all_settings(session) == {"offline_enabled": True, "offline_txn_max": 25000}
     finally:
         engine.dispose()

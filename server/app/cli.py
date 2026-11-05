@@ -131,7 +131,10 @@ def seed_minimal(
             print(f"{device_id} Device Key: {token}", file=stream)
     else:
         print("No new devices created; existing device keys were not displayed.", file=stream)
-    print("seed-minimal complete. Development database only; do not run against production.", file=stream)
+    print(
+        "seed-minimal complete. Development database only; do not run against production.",
+        file=stream,
+    )
     return 0
 
 

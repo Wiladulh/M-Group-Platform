@@ -19,11 +19,14 @@ def test_seed_minimal_creates_admin_and_devices(tmp_path):
     engine, factory = make_factory(tmp_path / "seed.db")
     output = StringIO()
     try:
-        assert seed_minimal(
-            factory,
-            {"ADMIN_USERNAME": "owner", "ADMIN_PASSWORD": "StrongPass123"},
-            output,
-        ) == 0
+        assert (
+            seed_minimal(
+                factory,
+                {"ADMIN_USERNAME": "owner", "ADMIN_PASSWORD": "StrongPass123"},
+                output,
+            )
+            == 0
+        )
         with factory() as session:
             admin = session.scalar(select(AdminUser))
             assert admin.username == "owner"
@@ -61,9 +64,12 @@ def test_seed_minimal_is_idempotent_and_does_not_rotate_credentials(tmp_path):
                 row.device_id: row.token_hash for row in session.scalars(select(Device)).all()
             }
         second = StringIO()
-        assert seed_minimal(
-            factory, {"ADMIN_USERNAME": "changed", "ADMIN_PASSWORD": "OtherPass123"}, second
-        ) == 0
+        assert (
+            seed_minimal(
+                factory, {"ADMIN_USERNAME": "changed", "ADMIN_PASSWORD": "OtherPass123"}, second
+            )
+            == 0
+        )
         with factory() as session:
             assert len(session.scalars(select(AdminUser)).all()) == 1
             assert len(session.scalars(select(Device)).all()) == 3

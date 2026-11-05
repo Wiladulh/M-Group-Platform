@@ -53,12 +53,25 @@ def add_member(factory, balance=10_000, suffix=1):
             full_name=f"Member {suffix}",
             nik_enc=f"enc-{suffix}",
             nik_idx=f"idx-{suffix}",
-            balance=balance,
+            balance=0,
             status="ACTIVE",
         )
         session.add(member)
         session.flush()
-        return member.id
+        member_id = member.id
+    if balance:
+        with factory() as session:
+            LedgerService(session).credit(
+                member_id,
+                balance,
+                txn_uuid=f"opening-{suffix}",
+                type="TOPUP",
+                source="ADMIN",
+                note="Test-only opening balance",
+                performed_by_type="SYSTEM",
+                performed_by_id="TEST-SEED",
+            )
+    return member_id
 
 
 def debit(service, member_id, amount=5_000, txn_uuid="debit-1"):
@@ -112,8 +125,11 @@ def test_debit_success(db):
     with factory() as session:
         assert session.get(Member, member_id).balance == 5_000
         assert session.scalar(
-            select(Transaction).where(Transaction.member_id == member_id)
+            select(Transaction.id).where(Transaction.txn_uuid == "debit-1")
         ) is not None
+        assert len(session.scalars(
+            select(Transaction).where(Transaction.member_id == member_id)
+        ).all()) == 2
     assert_invariant(factory, member_id)
 
 
@@ -124,7 +140,12 @@ def test_debit_insufficient(db):
         debit(LedgerService(session), member_id, 6_000)
     with factory() as session:
         assert session.get(Member, member_id).balance == 5_000
-        assert session.scalar(select(Transaction.id)) is None
+        assert session.scalar(
+            select(Transaction.id).where(Transaction.txn_uuid == "debit-1")
+        ) is None
+        assert len(session.scalars(
+            select(Transaction).where(Transaction.member_id == member_id)
+        ).all()) == 1
 
 
 def test_debit_idempotent_same_payload(db):

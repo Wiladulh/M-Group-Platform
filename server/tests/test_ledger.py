@@ -1,10 +1,10 @@
 """Ledger invariants, idempotency, and SQLite concurrency tests."""
 
-import random
-import threading
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import redirect_stdout
 from io import StringIO
+import random
+import threading
 
 import pytest
 from sqlalchemy import create_engine, event, select, text
@@ -234,7 +234,7 @@ def test_concurrent_debits_no_overspend(db):
 
 
 def test_ledger_invariant_after_random_ops(db, monkeypatch):
-    engine, factory = db
+    _, factory = db
     member_ids = [add_member(factory, balance=20_000, suffix=i) for i in range(1, 6)]
     rng = random.Random(20261105)
     reversible = {member_id: [] for member_id in member_ids}

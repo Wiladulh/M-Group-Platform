@@ -1,6 +1,7 @@
 """Maintenance command-line utilities for M-Group Platform."""
 
 import argparse
+
 from sqlalchemy import func, select
 
 from app.db import SessionLocal

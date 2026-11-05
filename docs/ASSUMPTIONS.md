@@ -45,3 +45,6 @@
 - Device Key hanya dicetak untuk device yang baru dibuat; seed kedua kali tidak dapat menampilkan ulang key karena database hanya menyimpan hash.
 - P5 tidak menambah endpoint atau token Admin. P14 wajib memastikan semua route /admin/* hanya menerima session cookie dan menolak header Authorization (Section 16 #17).
 - CLOCK_SKEW disediakan sebagai domain error handler 409; pemeriksaan timestamp request akan diterapkan pada fase transaksi.
+- Session dependency request-scoped melakukan commit setelah request sukses, rollback saat exception, dan selalu close; dependency yang sama dipakai oleh auth dan handler endpoint.
+- Kegagalan auth tidak mengubah last_seen_at/last_ip; presence hanya diperbarui setelah status ACTIVE dan token terverifikasi.
+- CI final P5 pada run 42026075969: Ruff SUCCESS, Pytest SUCCESS (82 passed, 1 warning, security coverage 96.30%).

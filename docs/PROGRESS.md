@@ -8,7 +8,7 @@
 | P2 | Full database schema + migration: 19 SQLAlchemy models, Alembic revision 0001, constraints/indexes, schema tests dan DB_SCHEMA.md | DONE | 31405495385b7f3aa792ece0b036a0015d8d3eed |
 | P3 | Security primitives (Argon2id, PIN, encryption, token, CSRF) | DONE | b86e533bced8dd0ae09f036333bf901f79fd6d31 |
 | P4 | Ledger service, atomic debit/credit, allowance MVP, verify-ledger CLI, dan concurrency tests | DONE | e9205b8bfd909a3045751373794f9045ba2daa96 |
-| P5 | Request-scoped DB session, device bearer auth, GET device config, settings service, seed-minimal CLI, tests dan dokumentasi | IMPLEMENTED — CI pending | pending |
+| P5 | Request-scoped DB session, device bearer auth, GET device config, settings service, seed-minimal CLI, tests dan dokumentasi | DONE | f16d34a3e069bcf01d63f6b675ed9fadb538f31b |
 
 ## Catatan
 - P0 hanya membuat dokumentasi; belum ada kode aplikasi, firmware, migrasi, atau konfigurasi runtime.
@@ -34,8 +34,12 @@
 - Ledger service, allowance MVP, CLI verify-ledger, dan concurrency tests selesai pada commit `e9205b8bfd909a3045751373794f9045ba2daa96`.
 - CI P4: [run 41959352025](https://github.com/Wiladulh/M-Group-Platform/actions/runs/41959352025); Ruff SUCCESS, Pytest SUCCESS, 71 passed.
 
-## Catatan P5
-- Implementasi P5 dikerjakan pada branch `p5-device-auth` dalam tiga logical commits.
-- Seed membuat satu Admin (Argon2id, must_change_password=true) dan tiga perangkat development. Device Key ditampilkan satu kali saat perangkat baru dibuat; nilai database berupa SHA-256 hash.
+## Catatan P5 — DONE
+- Implementasi dikerjakan dan dipush ke `main`; branch kerja `p5-device-auth` juga tersedia.
+- Commit implementasi final P5: `f16d34a3e069bcf01d63f6b675ed9fadb538f31b`.
+- Logical commits fitur: `cedbb0098a402b249a38d8c94ac10ee5e4df0ad1` (session/auth/config), `5156b3b889c820037e7b1156be546efa40057e29` (seed CLI), `111c62f75acff8c972e0e54c3d58d827da2e2a5f` (tests/docs); commits berikutnya memperbaiki lint dan formatting.
 - Tidak ada migration baru karena tabel dan kolom yang diperlukan telah tersedia dari schema P2.
-- Hasil CI akan dicatat setelah workflow Ruff dan Pytest selesai.
+- CI final: [GitHub Actions run 42026075969](https://github.com/Wiladulh/M-Group-Platform/actions/runs/42026075969).
+- Job `Ruff`: SUCCESS (ruff check dan ruff format --check).
+- Job `Pytest`: SUCCESS, **82 passed**, 1 warning; security coverage 96.30%.
+- Seed P5 membuat satu Admin (Argon2id, must_change_password=true) dan tiga perangkat development. Device Key dicetak satu kali hanya untuk perangkat baru; DB hanya menyimpan SHA-256 hash. Plaintext keys tidak disimpan pada dokumentasi/commit.

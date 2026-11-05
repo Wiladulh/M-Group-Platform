@@ -1,9 +1,9 @@
 # Keamanan dan Primitif Kriptografi
 
-Dokumen ini menjelaskan keputusan kriptografi server M-Group Platform v1.3. Modul
-`server/app/security/` hanya berisi fungsi murni/helper kriptografi; autentikasi HTTP,
-session lifecycle, rate limiting, lockout, dan otorisasi akan diterapkan pada lapisan
-service/router terpisah.
+Dokumen ini menjelaskan keputusan keamanan server M-Group Platform v1.3. Modul
+`server/app/security/` berisi fungsi kriptografi; autentikasi HTTP perangkat kini
+diterapkan melalui dependency `require_device`. Admin WebUI/session auth, rate limiting,
+lockout, dan otorisasi Admin akan diterapkan pada fase terpisah.
 
 ## Hash password Admin dan PIN transaksi
 
@@ -69,18 +69,42 @@ tengah diganti bullet, dan empat karakter akhir. Untuk input pendek (delapan kar
 atau kurang), seluruh karakter disamarkan. Penampilan NIK lengkap hanya boleh dilakukan
 melalui alur reveal yang diaudit; helper ini sendiri tidak mengatur audit.
 
-## Token perangkat, session, dan CSRF
+## Autentikasi perangkat (Section 4.2)
 
-Device Key dan session token dibuat dari 32 byte acak melalui
-`secrets.token_urlsafe(32)`. Database hanya menyimpan SHA-256 hex digest token.
-Verifikasi membandingkan digest menggunakan `hmac.compare_digest`. CSRF token juga
-menggunakan generator acak kriptografis dan diverifikasi dengan perbandingan
-constant-time.
+Setiap unit mengirim dua header pada setiap REST request:
 
-Hash SHA-256 token tidak menggantikan TLS: token tetap merupakan bearer credential.
-Gunakan HTTPS/WSS bila trafik melewati jaringan yang tidak sepenuhnya dipercaya,
-batasi akses LAN, rotasi/revoke Device Key saat terindikasi bocor, dan jangan
-menyertakan token pada URL atau log.
+- `Authorization: Bearer <device_token>`
+- `X-Device-Id: <device_id>`
+
+Dependency `app.security.device_auth.require_device` mencari device berdasarkan
+`X-Device-Id`, memastikan status `ACTIVE`, lalu memverifikasi bearer token dengan
+`verify_device_token`. Verifier menghitung SHA-256 token dan membandingkannya dengan
+`hmac.compare_digest`; token plaintext tidak pernah dicari atau disimpan di database.
+
+Kegagalan header, format Bearer, ID, token, atau status perangkat selalu menghasilkan
+HTTP 401 dengan kode `DEVICE_REVOKED` dan pesan generik `Unauthorized device`.
+Pesan yang sama mencegah API mengungkap apakah ID perangkat valid atau perangkat
+telah dicabut. Header yang tidak lengkap juga ditolak sebagai 401, bukan sebagai
+validasi 422.
+
+Hanya autentikasi sukses yang memperbarui `last_seen_at` dan `last_ip`. Request
+gagal tidak memperbarui heartbeat/presence. Session SQLAlchemy bersifat request-scoped:
+commit setelah request sukses, rollback saat exception, dan selalu ditutup.
+
+Device Key dibuat dari 32 byte acak, hanya ditampilkan sekali ketika perangkat baru
+didaftarkan/di-seed, dan tidak dapat dipulihkan dari database karena hanya hash SHA-256
+yang disimpan. Seed development dapat menampilkan kunci perangkat baru; jangan
+menjalankannya pada database produksi. Rotasi/revoke key harus dilakukan melalui
+alur administrasi yang akan dibangun pada fase WebUI.
+
+Device Key adalah bearer credential. Hash token tidak menggantikan TLS. Gunakan
+HTTPS/WSS bila trafik melewati jaringan yang tidak sepenuhnya dipercaya, batasi akses
+LAN, rotasi/revoke Device Key saat terindikasi bocor, dan jangan menyertakan token
+pada URL atau log.
+
+P5 tidak membuat endpoint `/admin/*` atau Admin API Token. Sesuai Section 4.1 dan
+Section 16 #17, P14 wajib memastikan route `/admin/*` hanya menerima session cookie
+dan menolak setiap header `Authorization`.
 
 ## Pengelolaan kunci dan secret
 

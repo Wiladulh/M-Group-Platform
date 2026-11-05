@@ -64,3 +64,9 @@
 - `_debit_internal()` dan `_credit_internal()` hanya boleh dipanggil di dalam transaksi aktif; keduanya tidak melakukan commit/rollback. Caller bertanggung jawab membungkus seluruh perubahan ledger, allowance, dan co-write (misalnya audit/PIN reset) dalam satu `session.begin()`.
 - Public `debit()` dan `credit()` tetap aman secara default dan tetap membuka satu transaksi sendiri sebelum memanggil method internal.
 - `reverse()` dan metode perubahan status dispense tetap memiliki transaksi sendiri; akan direfaktor saat komposisi dibutuhkan oleh P6 vending atau P8 admin topup.
+
+
+## Patch batch — open questions
+- **P5 handler transaction boundary:** removing `session.flush()` from `require_device()` is not sufficient to leave the handler's request-scoped SQLAlchemy Session transaction-free. The successful authentication still executes `session.scalar(select(Device)...)`; SQLAlchemy autobegins a transaction on that SELECT. Therefore the requested temporary endpoint's `with session.begin():` would still raise `InvalidRequestError` because a transaction is already active.
+- The BackgroundTasks presence writer isolates the heartbeat UPDATE, but it does not isolate the authentication SELECT. Passing the P5 composition test safely requires an additional design choice, such as performing the auth lookup in a separate `SessionLocal()` and returning a detached, already-loaded Device object, or another explicit session-ownership strategy. This changes the specified dependency/session behavior, so implementation stopped here rather than improvising.
+- P5 code has not been modified in this batch. Decide/authorize the auth lookup session boundary before resuming PATCH 4.

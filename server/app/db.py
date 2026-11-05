@@ -1,22 +1,19 @@
-"""SQLAlchemy database engine and session configuration."""
+"""SQLAlchemy database engine and request-scoped session configuration."""
+
+from collections.abc import Generator
 
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.config import get_settings
 from app.models import Base as Base
 
 settings = get_settings()
 _is_sqlite = settings.database_url.startswith("sqlite")
-
 _connect_args = {"check_same_thread": False, "timeout": 5} if _is_sqlite else {}
 
-engine = create_engine(
-    settings.database_url,
-    connect_args=_connect_args,
-    pool_pre_ping=True,
-)
+engine = create_engine(settings.database_url, connect_args=_connect_args, pool_pre_ping=True)
 
 
 if _is_sqlite:
@@ -31,8 +28,17 @@ if _is_sqlite:
         cursor.close()
 
 
-SessionLocal = sessionmaker(
-    bind=engine,
-    autocommit=False,
-    autoflush=False,
-)
+SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False, expire_on_commit=False)
+
+
+def get_session() -> Generator[Session, None, None]:
+    """Yield one request-scoped session and commit or roll it back atomically."""
+    session = SessionLocal()
+    try:
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()

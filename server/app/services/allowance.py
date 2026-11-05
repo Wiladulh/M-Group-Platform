@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 from app.db import SessionLocal
 from app.models import Device, Member, OfflineAllowance, Setting
 
-
 DEFAULT_OFFLINE_CARD_CAP = 50_000
 
 

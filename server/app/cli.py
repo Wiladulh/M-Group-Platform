@@ -7,7 +7,6 @@ from sqlalchemy import func, select
 from app.db import SessionLocal
 from app.models import Member, Transaction
 
-
 BALANCE_STATUSES = (
     "COMPLETED",
     "PENDING_DISPENSE",

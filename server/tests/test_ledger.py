@@ -322,7 +322,6 @@ def test_ledger_invariant_after_random_ops(db, monkeypatch):
     assert "OK: 5 members verified" in output.getvalue()
 
 
-
 def _internal_debit(service, member_id, txn_uuid="internal-debit"):
     return service._debit_internal(
         member_id,

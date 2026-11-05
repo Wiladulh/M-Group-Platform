@@ -28,7 +28,12 @@ if _is_sqlite:
         cursor.close()
 
 
-SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False, expire_on_commit=False)
+SessionLocal = sessionmaker(
+    bind=engine,
+    autocommit=False,
+    autoflush=False,
+    expire_on_commit=False,
+)
 
 
 def get_session() -> Generator[Session, None, None]:

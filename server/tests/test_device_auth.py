@@ -1,7 +1,5 @@
 """Device bearer authentication, config merge, and settings service tests."""
 
-from datetime import UTC, datetime, timedelta
-
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
@@ -10,7 +8,7 @@ from app import db
 from app.main import app
 from app.models import Base, Device, Setting
 from app.security.device_token import generate_device_token, hash_device_token
-from app.services.settings import get_setting, set_setting
+from app.services.settings import get_all_settings, get_setting, set_setting
 
 
 def make_test_db(path, monkeypatch):
@@ -23,17 +21,18 @@ def make_test_db(path, monkeypatch):
 
 def add_device(factory, token, *, status="ACTIVE", config_json=None):
     with factory.begin() as session:
-        device = Device(
-            device_id="CSH-001",
-            name="Cashier Test",
-            type="cashier",
-            reported_mode="manual",
-            slot_count=0,
-            token_hash=hash_device_token(token),
-            status=status,
-            config_json=config_json,
+        session.add(
+            Device(
+                device_id="CSH-001",
+                name="Cashier Test",
+                type="cashier",
+                reported_mode="manual",
+                slot_count=0,
+                token_hash=hash_device_token(token),
+                status=status,
+                config_json=config_json,
+            )
         )
-        session.add(device)
 
 
 def test_valid_device_token_returns_config_and_updates_last_seen(tmp_path, monkeypatch):
@@ -73,6 +72,17 @@ def test_missing_authorization_returns_device_revoked(tmp_path, monkeypatch):
             )
         assert response.status_code == 401
         assert response.json()["error"]["code"] == "DEVICE_REVOKED"
+    finally:
+        engine.dispose()
+
+
+def test_both_credentials_missing_returns_device_revoked(tmp_path, monkeypatch):
+    engine, _factory = make_test_db(tmp_path / "no-credentials.db", monkeypatch)
+    try:
+        with TestClient(app) as client:
+            response = client.get("/api/v1/device/config")
+        assert response.status_code == 401
+        assert response.json()["error"]["message"] == "Unauthorized device"
     finally:
         engine.dispose()
 
@@ -161,7 +171,7 @@ def test_failed_auth_does_not_update_last_seen(tmp_path, monkeypatch):
         engine.dispose()
 
 
-def test_settings_helpers_cast_and_upsert(tmp_path):
+def test_settings_helpers_cast_upsert_and_list(tmp_path):
     engine = create_engine(f"sqlite:///{tmp_path / 'settings.db'}")
     Base.metadata.create_all(engine)
     factory = sessionmaker(bind=engine, expire_on_commit=False)
@@ -178,5 +188,6 @@ def test_settings_helpers_cast_and_upsert(tmp_path):
             assert session.scalar(
                 select(Setting.value).where(Setting.key == "offline_txn_max")
             ) == "25000"
+            assert get_all_settings(session) == {"offline_enabled": True, "offline_txn_max": 25000}
     finally:
         engine.dispose()

@@ -1,14 +1,13 @@
 """Device bearer authentication, config merge, and settings service tests."""
 
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, select
-from sqlalchemy.orm import sessionmaker
-
 from app import db
 from app.main import app
 from app.models import Base, Device, Setting
 from app.security.device_token import generate_device_token, hash_device_token
 from app.services.settings import get_all_settings, get_setting, set_setting
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import sessionmaker
 
 
 def make_test_db(path, monkeypatch):

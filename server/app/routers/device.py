@@ -28,8 +28,8 @@ DEFAULTS = {
 
 @router.get("/config", response_model=DeviceConfigResponse)
 def get_device_config(
-    device: Device = Depends(require_device),
-    session: Session = Depends(get_session),
+    device: Device = Depends(require_device),  # noqa: B008
+    session: Session = Depends(get_session),  # noqa: B008
 ) -> DeviceConfigResponse:
     """Return effective global configuration merged with device overrides."""
     try:
@@ -45,7 +45,7 @@ def get_device_config(
         "offline_hold_mode": get_setting(
             session, "offline_hold_mode", DEFAULTS["offline_hold_mode"]
         ),
-        "offline_enabled": device.type == "cashier",
+        "offline_enabled": True,
     }
     effective.update(overrides)
     catalog_version = None

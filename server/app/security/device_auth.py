@@ -23,7 +23,7 @@ def require_device(
     request: Request,
     authorization: str | None = Header(default=None, alias="Authorization"),
     x_device_id: str | None = Header(default=None, alias="X-Device-Id"),
-    session: Session = Depends(get_session),
+    session: Session = Depends(get_session),  # noqa: B008
 ) -> Device:
     """Authenticate a device and update its successful-request heartbeat.
 

@@ -2,12 +2,11 @@
 
 from io import StringIO
 
-from sqlalchemy import create_engine, select
-from sqlalchemy.orm import sessionmaker
-
 from app.cli import seed_minimal
 from app.models import AdminUser, Base, Device
 from app.security.device_token import verify_device_token
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import sessionmaker
 
 
 def make_factory(path):

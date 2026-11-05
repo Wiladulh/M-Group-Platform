@@ -6,12 +6,9 @@
 | P0 | Membaca spesifikasi baseline v1.3 dan membuat dokumentasi pemahaman serta scaffolding docs | Selesai | 06bcf7428cc54beeeb13c3b6abe21b3a1d28ffe9 |
 | P1 | Server skeleton: packaging, settings, SQLite engine, FastAPI health endpoint, dan Alembic environment | DONE | 766145683b6025a4b4cad756cf8fd41e00a199b6 |
 | P2 | Full database schema + migration: 19 SQLAlchemy models, Alembic revision 0001, constraints/indexes, schema tests dan DB_SCHEMA.md | DONE | 31405495385b7f3aa792ece0b036a0015d8d3eed |
-| P3 | WebSocket, remote binding, dan offline sync | Belum dimulai | — |
-| P4 | Admin WebUI (tahap 3a dan 3b sesuai Section 18) | Belum dimulai | — |
-| P5 | firmware-common dan native tests | Belum dimulai | — |
-| P6 | Cashier Firmware | Belum dimulai | — |
-| P7 | Vending Firmware | Belum dimulai | — |
-| P8 | Simulator, dokumentasi lanjutan, dan hardening | Belum dimulai | — |
+| P3 | Security primitives (Argon2id, PIN, encryption, token, CSRF) | DONE | b86e533bced8dd0ae09f036333bf901f79fd6d31 |
+| P4 | Ledger service, atomic debit/credit, allowance MVP, verify-ledger CLI, dan concurrency tests | IN PROGRESS | b995e41f9200b41d5ee82a74306972b02829a8d2 |
+| Berikutnya | Fase server lanjutan, transaksi API (P6), WebSocket/binding/offline sync, lalu WebUI dan firmware sesuai prompt fase berikutnya | Belum dimulai | — |
 
 ## Catatan
 
@@ -41,3 +38,14 @@
 - Migration membentuk 19 tabel dan 7 indeks eksplisit, termasuk partial unique index kartu ACTIVE/LOCKED.
 - SQLite pragmas pada engine aplikasi diverifikasi: foreign_keys=ON, busy_timeout=5000, journal_mode=WAL per koneksi.
 - P2 ini hanya menyelesaikan schema dan migration. Router, service, device auth, ledger business logic, dan allowance logic belum dibuat; itu tetap berada pada fase berikutnya.
+
+
+## Catatan P3
+- Security primitives dan pengujian selesai pada commit `b86e533bced8dd0ae09f036333bf901f79fd6d31`.
+- P3 adalah implementasi security primitives; baris roadmap lama yang menyebut P3 sebagai WebSocket telah dikoreksi.
+
+## Catatan P4 — implementasi berjalan
+- Ledger service, allowance MVP, CLI verify-ledger, dan test suite P4 sudah ditambahkan ke branch `main`.
+- Commit implementasi terakhir saat catatan ini ditulis: `b995e41f9200b41d5ee82a74306972b02829a8d2`.
+- Pengujian concurrency menggunakan 10 thread pada file-backed SQLite, WAL, busy_timeout 30 detik, dan transaksi `BEGIN IMMEDIATE`; hasil final menunggu CI.
+- P4 belum dinyatakan DONE sampai kedua job CI (Ruff dan Pytest) sukses dan hasil concurrency test diverifikasi.

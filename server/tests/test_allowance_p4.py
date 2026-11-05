@@ -3,7 +3,6 @@
 import json
 
 import pytest
-
 from app.models import Base, Device, Member, OfflineAllowance, Setting
 from app.services.allowance import AllowanceService
 from sqlalchemy import create_engine, select

@@ -57,4 +57,4 @@
 ## Coverage patch — measure the complete app package
 - Pytest coverage scope diperluas dari `app/security` menjadi seluruh package `app` (`--cov=app`); threshold tetap 70% dan tidak ada module yang dikecualikan.
 - Baseline sebelum perubahan ini: P5 CI hanya mengukur `app/security` (96.30% pada run 42026075969); angka tersebut bukan baseline coverage seluruh aplikasi.
-- Coverage total dan module di bawah 70% akan dicatat berdasarkan hasil CI pertama dengan scope `app`.
+- Hasil CI scope seluruh `app`: **89.00%** (873 statements, 96 missed), 86 tests passed. Tidak ada module di bawah 70%; terendah `app/services/settings.py` 73% (37 statements), lalu `app/services/ledger.py` 75% (126), `app/services/allowance.py` 75% (56), dan `app/cli.py` 72% (82).

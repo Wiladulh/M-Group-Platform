@@ -3,11 +3,10 @@
 import json
 from datetime import UTC, datetime
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
 from app.db import SessionLocal
 from app.models import Device, Member, OfflineAllowance, Setting
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 
 DEFAULT_OFFLINE_CARD_CAP = 50_000

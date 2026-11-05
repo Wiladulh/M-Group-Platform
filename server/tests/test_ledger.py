@@ -1,10 +1,11 @@
 """Ledger invariants, idempotency, and SQLite concurrency tests."""
 
+import random
+import threading
+
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import redirect_stdout
 from io import StringIO
-import random
-import threading
 
 import pytest
 from sqlalchemy import create_engine, event, select, text

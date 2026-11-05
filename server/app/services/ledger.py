@@ -66,6 +66,8 @@ class LedgerService:
         if existing is None:
             return
         if self._payload_matches(existing, payload):
+            # Preserve the loaded row through the rollback caused by the domain exception.
+            self.session.expunge(existing)
             raise IdempotencyConflict(
                 "Identical transaction already exists", original=existing, conflict=False
             )

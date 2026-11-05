@@ -210,7 +210,6 @@ def test_csrf_token_generate_and_verify() -> None:
     assert not verify_csrf_token(token, token + "x")
 
 
-
 def test_encryption_rejects_all_zero_data_key(monkeypatch: pytest.MonkeyPatch) -> None:
     _set_data_key(monkeypatch, bytes(32))
     with pytest.raises(ValueError, match="tidak boleh seluruhnya nol"):

@@ -36,3 +36,12 @@
 - Argon2id menggunakan `argon2-cffi PasswordHasher(type=Type.ID)` dengan parameter default pustaka (time_cost=3, memory_cost=65536 KiB, parallelism=4, hash_len=32, salt_len=16). Section 4 menetapkan algoritma Argon2id tetapi tidak menentukan angka parameter, sehingga pemakaian default modern bukan penyimpangan dari spesifikasi.
 - `DATA_KEY` dibaca melalui Settings dan divalidasi sebagai Base64 yang mendekode tepat 32 byte; `PIN_PEPPER` merupakan secret independen. Kedua nilai wajib diganti dengan secret produksi dan tidak boleh masuk repository.
 - Dependency `argon2-cffi` dan `cryptography` sudah tersedia di dependencies utama; tidak ada perubahan dependency diperlukan.
+
+
+## P4 — Ledger dan Allowance MVP
+- SQLite concurrency test memakai file-backed database dengan WAL, `busy_timeout=30000`, dan SQLAlchemy begin-event yang menjalankan `BEGIN IMMEDIATE`. Ini mencegah deferred read-to-write lock upgrade pada skenario thread bersamaan; saldo tetap dimutasi hanya dengan satu statement atomic `UPDATE ... WHERE balance >= amount RETURNING balance`. Hasil lulus/gagal ditentukan CI, bukan diasumsikan dari konfigurasi.
+- Schema v1.3 belum memiliki tabel eksplisit untuk daftar cache member per device. Untuk allowance MVP, denominator N diproksikan sebagai jumlah device berstatus ACTIVE dengan `config_json.offline_enabled=true`. P9 harus menggantinya dengan keanggotaan cache aktual saat pipeline cache tersedia.
+- Jika N=0, fungsi mengembalikan mapping kosong (tidak ada device yang menerima allowance); tidak dilakukan pembagian nol dan tidak dibuat baris allowance fiktif.
+- Perubahan saldo memicu perhitungan ulang allowance dalam transaksi ledger yang sama. Perangkat yang tidak lagi eligible menerima allowance 0 pada baris lama agar nilai tersimpan tidak tertinggal.
+- Reversal tidak mengubah transaksi original; baris ADJUSTMENT baru memakai arah kebalikan dan `ref_txn_id`. Dispense gagal menyimpan status `DISPENSE_FAILED` pada debit awal dan, bila auto-refund aktif, menambahkan baris REFUND CREDIT. Source refund disimpan sebagai `ADMIN` karena CHECK schema hanya mengizinkan ONLINE/OFFLINE_SYNC/ADMIN; pelaku tetap `SYSTEM`.
+- CLI menganggap hanya status COMPLETED, PENDING_DISPENSE, DISPENSE_FAILED, dan REVERSED sebagai baris yang memengaruhi invariant; REJECTED tidak mengubah saldo dan tidak dihitung.

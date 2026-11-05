@@ -187,9 +187,7 @@ class LedgerService:
     ) -> Transaction:
         """Perform a debit inside the caller's active transaction. The caller owns commit/rollback and all co-writes."""
         if not self.session.in_transaction():
-            raise LedgerError(
-                "_debit_internal must be called inside an active transaction"
-            )
+            raise LedgerError("_debit_internal must be called inside an active transaction")
         self._validate_amount(amount)
         occurred_at = self._utc(occurred_at) if occurred_at is not None else None
         payload = dict(
@@ -229,7 +227,6 @@ class LedgerService:
         )
         self._refresh_allowances(member_id)
         return row
-
 
     def debit(
         self,
@@ -285,9 +282,7 @@ class LedgerService:
     ) -> Transaction:
         """Perform a credit inside the caller's active transaction. The caller owns commit/rollback and all co-writes."""
         if not self.session.in_transaction():
-            raise LedgerError(
-                "_credit_internal must be called inside an active transaction"
-            )
+            raise LedgerError("_credit_internal must be called inside an active transaction")
         self._validate_amount(amount)
         if type not in {"TOPUP", "REFUND", "ADJUSTMENT"}:
             raise LedgerError("Credit supports TOPUP, REFUND, or ADJUSTMENT only")
@@ -331,7 +326,6 @@ class LedgerService:
         )
         self._refresh_allowances(member_id)
         return row
-
 
     def credit(
         self,

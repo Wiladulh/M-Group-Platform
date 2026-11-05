@@ -357,7 +357,9 @@ def test_debit_internal_requires_active_transaction(db):
     member_id = add_member(factory)
     with factory() as session:
         service = LedgerService(session)
-        with pytest.raises(LedgerError, match="_debit_internal must be called inside an active transaction"):
+        with pytest.raises(
+            LedgerError, match="_debit_internal must be called inside an active transaction"
+        ):
             _internal_debit(service, member_id)
 
 
@@ -372,13 +374,14 @@ def test_debit_internal_rolls_back_on_exception(db):
     with factory() as session:
         service = LedgerService(session)
         with pytest.raises(RuntimeError, match="force rollback"), session.begin():
-                _internal_debit(service, member_id, "rollback-debit")
-                raise RuntimeError("force rollback")
+            _internal_debit(service, member_id, "rollback-debit")
+            raise RuntimeError("force rollback")
     with factory() as session:
         assert session.get(Member, member_id).balance == 10_000
-        assert session.scalar(
-            select(Transaction.id).where(Transaction.txn_uuid == "rollback-debit")
-        ) is None
+        assert (
+            session.scalar(select(Transaction.id).where(Transaction.txn_uuid == "rollback-debit"))
+            is None
+        )
         allowance = session.scalar(
             select(OfflineAllowance).where(OfflineAllowance.member_id == member_id)
         )
@@ -404,35 +407,40 @@ def test_compositional_debit_plus_audit_in_one_transaction(db):
             )
     with factory() as session:
         assert session.get(Member, member_id).balance == 5_000
-        assert session.scalar(
-            select(Transaction.id).where(Transaction.txn_uuid == "composed-commit")
-        ) is not None
-        assert session.scalar(
-            select(AuditLog.id).where(AuditLog.action == "TEST_DEBIT")
-        ) is not None
+        assert (
+            session.scalar(select(Transaction.id).where(Transaction.txn_uuid == "composed-commit"))
+            is not None
+        )
+        assert (
+            session.scalar(select(AuditLog.id).where(AuditLog.action == "TEST_DEBIT")) is not None
+        )
 
     with factory() as session:
         service = LedgerService(session)
         with pytest.raises(RuntimeError, match="force rollback"), session.begin():
-                _internal_debit(service, member_id, "composed-rollback")
-                session.add(
-                    AuditLog(
-                        actor_type="DEVICE",
-                        actor_id="CSH-001",
-                        action="TEST_DEBIT_ROLLBACK",
-                        entity="member",
-                        entity_id=str(member_id),
-                    )
+            _internal_debit(service, member_id, "composed-rollback")
+            session.add(
+                AuditLog(
+                    actor_type="DEVICE",
+                    actor_id="CSH-001",
+                    action="TEST_DEBIT_ROLLBACK",
+                    entity="member",
+                    entity_id=str(member_id),
                 )
-                raise RuntimeError("force rollback")
+            )
+            raise RuntimeError("force rollback")
     with factory() as session:
         assert session.get(Member, member_id).balance == 5_000
-        assert session.scalar(
-            select(Transaction.id).where(Transaction.txn_uuid == "composed-rollback")
-        ) is None
-        assert session.scalar(
-            select(AuditLog.id).where(AuditLog.action == "TEST_DEBIT_ROLLBACK")
-        ) is None
+        assert (
+            session.scalar(
+                select(Transaction.id).where(Transaction.txn_uuid == "composed-rollback")
+            )
+            is None
+        )
+        assert (
+            session.scalar(select(AuditLog.id).where(AuditLog.action == "TEST_DEBIT_ROLLBACK"))
+            is None
+        )
 
 
 def test_allowance_recomputed_after_compositional_debit(db):

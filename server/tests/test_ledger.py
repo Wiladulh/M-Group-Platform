@@ -413,8 +413,7 @@ def test_compositional_debit_plus_audit_in_one_transaction(db):
 
     with factory() as session:
         service = LedgerService(session)
-        with pytest.raises(RuntimeError, match="force rollback"):
-            with session.begin():
+        with pytest.raises(RuntimeError, match="force rollback"), session.begin():
                 _internal_debit(service, member_id, "composed-rollback")
                 session.add(
                     AuditLog(

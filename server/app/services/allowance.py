@@ -9,7 +9,6 @@ from sqlalchemy.orm import Session
 from app.db import SessionLocal
 from app.models import Device, Member, OfflineAllowance, Setting
 
-
 DEFAULT_OFFLINE_CARD_CAP = 50_000
 
 
@@ -20,18 +19,14 @@ class AllowanceService:
         self.session = session
 
     def _global_cap(self) -> int:
-        value = self.session.scalar(
-            select(Setting.value).where(Setting.key == "offline_card_cap")
-        )
+        value = self.session.scalar(select(Setting.value).where(Setting.key == "offline_card_cap"))
         return int(value) if value is not None else DEFAULT_OFFLINE_CARD_CAP
 
     def compute_allowances_for_member(self, member_id: int) -> dict[int, int]:
         member = self.session.get(Member, member_id)
         if member is None or member.status != "ACTIVE":
             return {}
-        devices = self.session.scalars(
-            select(Device).where(Device.status == "ACTIVE")
-        ).all()
+        devices = self.session.scalars(select(Device).where(Device.status == "ACTIVE")).all()
         eligible: list[tuple[Device, int]] = []
         global_cap = self._global_cap()
         for device in devices:
@@ -45,10 +40,7 @@ class AllowanceService:
         count = len(eligible)
         if count == 0:
             return {}
-        return {
-            device.id: min(cap, member.balance // count)
-            for device, cap in eligible
-        }
+        return {device.id: min(cap, member.balance // count) for device, cap in eligible}
 
     def apply_allowances(self, member_id: int) -> None:
         """Persist allowance rows; P9 adds ordered WebSocket cache updates."""

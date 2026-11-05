@@ -45,3 +45,5 @@
 - Perubahan saldo memicu perhitungan ulang allowance dalam transaksi ledger yang sama. Perangkat yang tidak lagi eligible menerima allowance 0 pada baris lama agar nilai tersimpan tidak tertinggal.
 - Reversal tidak mengubah transaksi original; baris ADJUSTMENT baru memakai arah kebalikan dan `ref_txn_id`. Dispense gagal menyimpan status `DISPENSE_FAILED` pada debit awal dan, bila auto-refund aktif, menambahkan baris REFUND CREDIT. Source refund disimpan sebagai `ADMIN` karena CHECK schema hanya mengizinkan ONLINE/OFFLINE_SYNC/ADMIN; pelaku tetap `SYSTEM`.
 - CLI menganggap hanya status COMPLETED, PENDING_DISPENSE, DISPENSE_FAILED, dan REVERSED sebagai baris yang memengaruhi invariant; REJECTED tidak mengubah saldo dan tidak dihitung.
+
+- CI validation P4 dijalankan melalui pull request sementara agar status job dan log dapat diperiksa; hasil akhir dicatat setelah Ruff dan Pytest selesai.

@@ -3,11 +3,10 @@
 import json
 
 import pytest
-from sqlalchemy import create_engine, select
-from sqlalchemy.orm import sessionmaker
-
 from app.models import Base, Device, Member, OfflineAllowance, Setting
 from app.services.allowance import AllowanceService
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import sessionmaker
 
 
 @pytest.fixture

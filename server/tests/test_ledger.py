@@ -88,20 +88,18 @@ def debit(service, member_id, amount=5_000, txn_uuid="debit-1"):
 
 
 def ledger_sums(session, member_id):
-    rows = session.scalars(
-        select(Transaction).where(Transaction.member_id == member_id)
-    ).all()
+    rows = session.scalars(select(Transaction).where(Transaction.member_id == member_id)).all()
     credits = sum(
-        row.amount for row in rows
-        if row.direction == "CREDIT" and row.status in {
-            "COMPLETED", "PENDING_DISPENSE", "DISPENSE_FAILED", "REVERSED"
-        }
+        row.amount
+        for row in rows
+        if row.direction == "CREDIT"
+        and row.status in {"COMPLETED", "PENDING_DISPENSE", "DISPENSE_FAILED", "REVERSED"}
     )
     debits = sum(
-        row.amount for row in rows
-        if row.direction == "DEBIT" and row.status in {
-            "COMPLETED", "PENDING_DISPENSE", "DISPENSE_FAILED", "REVERSED"
-        }
+        row.amount
+        for row in rows
+        if row.direction == "DEBIT"
+        and row.status in {"COMPLETED", "PENDING_DISPENSE", "DISPENSE_FAILED", "REVERSED"}
     )
     return credits, debits
 
@@ -123,12 +121,16 @@ def test_debit_success(db):
         assert row.amount == 5_000
     with factory() as session:
         assert session.get(Member, member_id).balance == 5_000
-        assert session.scalar(
-            select(Transaction.id).where(Transaction.txn_uuid == "debit-1")
-        ) is not None
-        assert len(session.scalars(
-            select(Transaction).where(Transaction.member_id == member_id)
-        ).all()) == 2
+        assert (
+            session.scalar(select(Transaction.id).where(Transaction.txn_uuid == "debit-1"))
+            is not None
+        )
+        assert (
+            len(
+                session.scalars(select(Transaction).where(Transaction.member_id == member_id)).all()
+            )
+            == 2
+        )
     assert_invariant(factory, member_id)
 
 
@@ -139,12 +141,15 @@ def test_debit_insufficient(db):
         debit(LedgerService(session), member_id, 6_000)
     with factory() as session:
         assert session.get(Member, member_id).balance == 5_000
-        assert session.scalar(
-            select(Transaction.id).where(Transaction.txn_uuid == "debit-1")
-        ) is None
-        assert len(session.scalars(
-            select(Transaction).where(Transaction.member_id == member_id)
-        ).all()) == 1
+        assert (
+            session.scalar(select(Transaction.id).where(Transaction.txn_uuid == "debit-1")) is None
+        )
+        assert (
+            len(
+                session.scalars(select(Transaction).where(Transaction.member_id == member_id)).all()
+            )
+            == 1
+        )
 
 
 def test_debit_idempotent_same_payload(db):
@@ -175,14 +180,24 @@ def test_credit_success_and_idempotency(db):
     member_id = add_member(factory, balance=0)
     with factory() as session:
         row = LedgerService(session).credit(
-            member_id, 7_000, txn_uuid="topup-1", type="TOPUP",
-            source="ADMIN", performed_by_type="ADMIN", performed_by_id="1",
+            member_id,
+            7_000,
+            txn_uuid="topup-1",
+            type="TOPUP",
+            source="ADMIN",
+            performed_by_type="ADMIN",
+            performed_by_id="1",
         )
         assert row.direction == "CREDIT"
     with factory() as session, pytest.raises(IdempotencyConflict) as exc:
         LedgerService(session).credit(
-            member_id, 7_000, txn_uuid="topup-1", type="TOPUP",
-            source="ADMIN", performed_by_type="ADMIN", performed_by_id="1",
+            member_id,
+            7_000,
+            txn_uuid="topup-1",
+            type="TOPUP",
+            source="ADMIN",
+            performed_by_type="ADMIN",
+            performed_by_id="1",
         )
     assert exc.value.original is not None
     with factory() as session:
@@ -212,8 +227,10 @@ def test_reverse_completed_debit(db):
         original_id = original.id
     with factory() as session:
         reversal = LedgerService(session).reverse(
-            original_id, reason="Test reversal",
-            performed_by_type="ADMIN", performed_by_id="1",
+            original_id,
+            reason="Test reversal",
+            performed_by_type="ADMIN",
+            performed_by_id="1",
         )
         assert reversal.type == "ADJUSTMENT"
         assert reversal.direction == "CREDIT"
@@ -234,7 +251,9 @@ def test_concurrent_debits_no_overspend(db):
             barrier.wait(timeout=10)
             try:
                 debit(
-                    LedgerService(session), member_id, 2_000,
+                    LedgerService(session),
+                    member_id,
+                    2_000,
                     txn_uuid=f"parallel-{index}",
                 )
                 return "success"
@@ -266,13 +285,18 @@ def test_ledger_invariant_after_random_ops(db, monkeypatch):
             operation = rng.choice(("credit", "debit", "reverse"))
             if operation == "credit":
                 service.credit(
-                    member_id, rng.randint(100, 2_000), txn_uuid=f"random-credit-{index}",
-                    performed_by_type="ADMIN", performed_by_id="1",
+                    member_id,
+                    rng.randint(100, 2_000),
+                    txn_uuid=f"random-credit-{index}",
+                    performed_by_type="ADMIN",
+                    performed_by_id="1",
                 )
             elif operation == "debit":
                 try:
                     row = debit(
-                        service, member_id, rng.randint(100, 2_000),
+                        service,
+                        member_id,
+                        rng.randint(100, 2_000),
                         txn_uuid=f"random-debit-{index}",
                     )
                     reversible[member_id].append(row.id)
@@ -281,8 +305,10 @@ def test_ledger_invariant_after_random_ops(db, monkeypatch):
             elif reversible[member_id]:
                 txn_id = reversible[member_id].pop()
                 service.reverse(
-                    txn_id, reason="Randomized test",
-                    performed_by_type="ADMIN", performed_by_id="1",
+                    txn_id,
+                    reason="Randomized test",
+                    performed_by_type="ADMIN",
+                    performed_by_id="1",
                 )
         assert_invariant(factory, member_id)
 

@@ -3,12 +3,13 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app.config import get_settings
 from app.db import engine
+from app.errors import DomainError
 from app.routers.device import router as device_router
-from app.security.device_auth import DeviceAuthError
 
 settings = get_settings()
 
@@ -35,11 +36,31 @@ app = FastAPI(
 )
 
 
-@app.exception_handler(DeviceAuthError)
-async def device_auth_error_handler(_request: Request, exc: DeviceAuthError):
+@app.exception_handler(DomainError)
+async def domain_error_handler(_request: Request, exc: DomainError):
     return JSONResponse(
-        status_code=401,
-        content={"error": {"code": exc.code, "message": exc.message, "details": {}}},
+        status_code=exc.status_code,
+        content={
+            "error": {
+                "code": exc.code,
+                "message": exc.message,
+                "details": exc.details,
+            }
+        },
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def request_validation_error_handler(_request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=422,
+        content={
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "Request validation failed",
+                "details": {"errors": exc.errors()},
+            }
+        },
     )
 
 
@@ -54,12 +75,15 @@ async def http_error_handler(_request: Request, exc: HTTPException):
         }
     else:
         error = {
-            "code": "VALIDATION_ERROR" if exc.status_code == 422 else "DEVICE_REVOKED",
+            "code": "VALIDATION_ERROR" if exc.status_code == 422 else "HTTP_ERROR",
             "message": str(detail),
             "details": {},
         }
-    headers = exc.headers or {}
-    return JSONResponse(status_code=exc.status_code, content={"error": error}, headers=headers)
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"error": error},
+        headers=exc.headers or {},
+    )
 
 
 @app.get("/healthz")

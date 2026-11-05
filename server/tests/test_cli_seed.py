@@ -1,6 +1,5 @@
 """Idempotent minimal seed command tests."""
 
-import json
 from io import StringIO
 
 from sqlalchemy import create_engine, select

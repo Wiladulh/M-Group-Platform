@@ -2,28 +2,21 @@
 
 from datetime import UTC, datetime
 
-from fastapi import Depends, Header, HTTPException, Request, status
+from fastapi import Depends, Header, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import get_session
+from app.errors import DomainError
 from app.models import Device
 from app.security.device_token import verify_device_token
 
 
-class DeviceAuthError(Exception):
-    """A domain authentication error suitable for the uniform API envelope."""
+class DeviceAuthError(DomainError):
+    """A generic authentication failure that does not reveal device state."""
 
     code = "DEVICE_REVOKED"
-    message = "Unauthorized device"
-
-
-def _unauthorized() -> HTTPException:
-    return HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail={"code": "DEVICE_REVOKED", "message": "Unauthorized device", "details": {}},
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+    status_code = 401
 
 
 def require_device(
@@ -37,13 +30,11 @@ def require_device(
     last_seen_at/last_ip are intentionally updated only after every credential
     and device-status check succeeds; failed attempts never refresh presence.
     """
-    if not authorization and not x_device_id:
-        raise _unauthorized()
     if not authorization or not x_device_id:
-        raise _unauthorized()
+        raise DeviceAuthError("Unauthorized device")
     scheme, separator, token = authorization.partition(" ")
     if not separator or scheme.lower() != "bearer" or not token.strip():
-        raise _unauthorized()
+        raise DeviceAuthError("Unauthorized device")
 
     device = session.scalar(select(Device).where(Device.device_id == x_device_id))
     if (
@@ -51,7 +42,7 @@ def require_device(
         or device.status != "ACTIVE"
         or not verify_device_token(token.strip(), device.token_hash)
     ):
-        raise _unauthorized()
+        raise DeviceAuthError("Unauthorized device")
 
     device.last_seen_at = datetime.now(UTC)
     device.last_ip = request.client.host if request.client else None

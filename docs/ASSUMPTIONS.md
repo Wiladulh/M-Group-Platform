@@ -8,44 +8,40 @@
 ## P1.5
 - app/config.py sudah memiliki default untuk seluruh setting yang digunakan; .env.test tidak diperlukan.
 - Menambahkan python-dotenv karena Pydantic Settings membaca env_file=".env".
-- Ruff import grouping diperbaiki secara minimal pada alembic/env.py, app/db.py, dan app/main.py; logika tidak berubah.
-- ruff format --check lulus tanpa perubahan format tambahan.
-- CI tidak menyimpan DATA_KEY produksi; key pengujian harus dibuat secara acak per proses.
+- Ruff import grouping diperbaiki secara minimal; logika tidak berubah.
+- CI tidak menyimpan DATA_KEY produksi; key pengujian dibuat acak per proses.
 - Root .gitignore dibuat; server/.gitignore dipertahankan.
 
 ## P2
-- Enum/status disimpan sebagai String dengan CHECK constraints agar validasi ditegakkan SQLite dan tidak bergantung pada validasi aplikasi.
+- Enum/status disimpan sebagai String dengan CHECK constraints agar validasi ditegakkan SQLite.
 - JSON payload disimpan sebagai TEXT; encoding/decoding menjadi tanggung jawab lapisan aplikasi.
-- DateTime(timezone=True) digunakan untuk timestamp. SQLite tidak memiliki tipe timestamp dengan timezone native; aplikasi wajib menulis dan membaca nilai sebagai UTC.
-- Kolom yang tidak ditandai nullable dibuat NOT NULL; kolom yang dinyatakan nullable/opsional dibuat nullable. Default sederhana seperti status ACTIVE dan counter 0 dipasang bila aman.
+- DateTime(timezone=True) digunakan; SQLite tidak memiliki tipe timestamp ber-timezone native, sehingga aplikasi wajib menulis/membaca UTC.
+- Kolom non-null mengikuti spesifikasi; default sederhana seperti status ACTIVE dan counter 0 dipasang bila aman.
 - catalog_meta dan admin_users singleton ditegakkan dengan CHECK(id = 1).
-- Index cards.uid dan members.nik_idx dibuat eksplisit meskipun kolom UNIQUE, sehingga indeks bernama yang diminta deliverable tersedia.
-- Migration test menggunakan koneksi SQLite in-memory yang disuntikkan ke Alembic. SQLite in-memory tidak dapat memakai WAL (pragma menghasilkan mode MEMORY); engine aplikasi tetap mengaktifkan WAL untuk database file. Foreign keys dan busy_timeout tetap aktif pada koneksi test.
-- Seluruh tabel menggunakan created_at dan updated_at bertipe DateTime(timezone=True); admin_sessions tetap memiliki last_seen_at, expires_at, dan revoked_at selain timestamp umum.
-- AdminUser dan CatalogMeta memakai CHECK(id = 1) untuk membatasi masing-masing tabel menjadi maksimal satu baris.
-- Kolom FK menggunakan ON DELETE default RESTRICT (tanpa cascade otomatis), agar histori transaksi/audit tidak terhapus secara tidak sengaja.
-- Migration revision 0001 membuat 19 tabel. Tujuh indeks eksplisit mencakup enam pola pencarian wajib dan partial unique index kartu ACTIVE/LOCKED.
-- Pytest schema dijalankan pada SQLite in-memory StaticPool dengan foreign_keys=ON dan busy_timeout=5000. SQLite in-memory mengabaikan permintaan WAL dan tetap berada pada mode MEMORY; engine aplikasi file-backed mengaktifkan WAL.
-- Pytest schema: lima pengujian khusus; suite CI pada commit schema mencatat 7 passed dan satu deprecation warning dari integrasi Starlette TestClient/httpx.
+- Index cards.uid dan members.nik_idx dibuat eksplisit.
+- Migration test memakai SQLite in-memory; WAL tidak didukung in-memory, sedangkan engine aplikasi file-backed mengaktifkan WAL.
+- FK memakai ON DELETE RESTRICT untuk melindungi histori transaksi/audit.
 
 ## P2.1 — DATA_KEY test isolation
-- .env.example dan default Settings.data_key menggunakan placeholder invalid agar aplikasi gagal cepat bila developer belum membuat key rahasia.
-- tests/conftest.py membuat DATA_KEY URL-safe Base64 dari secrets.token_bytes(32) sekali per sesi pytest; setdefault tetap mengizinkan key eksplisit untuk pengujian khusus.
-- Validator Settings menerima alfabet Base64 standar maupun URL-safe, memvalidasi alfabet secara ketat, dan mewajibkan hasil decode tepat 32 byte. Tidak ada key dummy statis pada workflow CI.
-## P3 — Security primitives
-- Argon2id menggunakan `argon2-cffi PasswordHasher(type=Type.ID)` dengan parameter default pustaka (time_cost=3, memory_cost=65536 KiB, parallelism=4, hash_len=32, salt_len=16). Section 4 menetapkan algoritma Argon2id tetapi tidak menentukan angka parameter, sehingga pemakaian default modern bukan penyimpangan dari spesifikasi.
-- `DATA_KEY` dibaca melalui Settings dan divalidasi sebagai Base64 yang mendekode tepat 32 byte; `PIN_PEPPER` merupakan secret independen. Kedua nilai wajib diganti dengan secret produksi dan tidak boleh masuk repository.
-- Dependency `argon2-cffi` dan `cryptography` sudah tersedia di dependencies utama; tidak ada perubahan dependency diperlukan.
+- DATA_KEY wajib valid Base64 yang mendekode tepat 32 byte; pytest membuat key acak per sesi.
 
+## P3 — Security primitives
+- Argon2id memakai parameter default modern dari argon2-cffi karena spesifikasi tidak menentukan angka parameter.
+- DATA_KEY dan PIN_PEPPER adalah secret independen dan tidak boleh masuk repository atau log.
 
 ## P4 — Ledger dan Allowance MVP
-- SQLite concurrency test memakai file-backed database dengan WAL, `busy_timeout=30000`, dan SQLAlchemy begin-event yang menjalankan `BEGIN IMMEDIATE`. Ini mencegah deferred read-to-write lock upgrade pada skenario thread bersamaan; saldo tetap dimutasi hanya dengan satu statement atomic `UPDATE ... WHERE balance >= amount RETURNING balance`. Hasil lulus/gagal ditentukan CI, bukan diasumsikan dari konfigurasi.
-- Schema v1.3 belum memiliki tabel eksplisit untuk daftar cache member per device. Untuk allowance MVP, denominator N diproksikan sebagai jumlah device berstatus ACTIVE dengan `config_json.offline_enabled=true`. P9 harus menggantinya dengan keanggotaan cache aktual saat pipeline cache tersedia.
-- Jika N=0, fungsi mengembalikan mapping kosong (tidak ada device yang menerima allowance); tidak dilakukan pembagian nol dan tidak dibuat baris allowance fiktif.
-- Perubahan saldo memicu perhitungan ulang allowance dalam transaksi ledger yang sama. Perangkat yang tidak lagi eligible menerima allowance 0 pada baris lama agar nilai tersimpan tidak tertinggal.
-- Reversal tidak mengubah transaksi original; baris ADJUSTMENT baru memakai arah kebalikan dan `ref_txn_id`. Dispense gagal menyimpan status `DISPENSE_FAILED` pada debit awal dan, bila auto-refund aktif, menambahkan baris REFUND CREDIT. Source refund disimpan sebagai `ADMIN` karena CHECK schema hanya mengizinkan ONLINE/OFFLINE_SYNC/ADMIN; pelaku tetap `SYSTEM`.
-- CLI menganggap hanya status COMPLETED, PENDING_DISPENSE, DISPENSE_FAILED, dan REVERSED sebagai baris yang memengaruhi invariant; REJECTED tidak mengubah saldo dan tidak dihitung.
+- SQLite concurrency test memakai file-backed database, WAL, busy_timeout 30000, dan BEGIN IMMEDIATE untuk menghindari deferred read-to-write lock upgrade.
+- Denominator allowance MVP diproksikan sebagai jumlah device ACTIVE dengan config_json.offline_enabled=true; P9 menggantinya dengan cache membership aktual.
+- N=0 menghasilkan mapping kosong; tidak ada pembagian nol atau allowance fiktif.
+- Perubahan saldo menghitung ulang allowance dalam transaksi ledger yang sama.
+- Reversal menambah baris ADJUSTMENT; original tidak diubah. Refund otomatis menggunakan source ADMIN karena CHECK schema membatasi source.
+- REJECTED tidak memengaruhi invariant saldo.
 
-- CI P4 final: workflow run 116 (https://github.com/Wiladulh/M-Group-Platform/actions/runs/41959352025) selesai sukses pada kedua job, Ruff dan Pytest. Pytest melaporkan 71 passed; coverage security 96.40%.
-- Concurrency P4: 10 thread, 5 debit berhasil dan 5 ditolak InsufficientBalance, saldo akhir 0; invariant tetap benar. Test memakai saldo pembuka sebagai transaksi TOPUP test-only agar invariant dimulai dari ledger yang seimbang.
-- Verifikasi ledger test seed: output CLI yang diuji adalah `OK: 5 members verified`; seed hanya dibuat di test dan tidak ditambahkan ke data produksi.
+## P5 — Device authentication, config, dan seed
+- Global setting dibaca dari tabel settings dan di-cast mengikuti tipe default; nilai device.config_json menimpa nilai global. Field device_config_overrides mengembalikan dictionary override yang tersimpan, bukan seluruh effective config.
+- Seed P5 menetapkan offline_enabled=true untuk ketiga device development agar allowance MVP P4 mengenali device tersebut. Nilai ini dapat diubah melalui config_json.
+- Device config default offline_enabled=true untuk kedua jenis device; spesifikasi menyebut Cashier manual default true dan Vending mengikuti kemampuan offline-first. Admin dapat menonaktifkan per device melalui config_json.
+- Cashier mode awal disimpan di reported_mode="manual"; override config_json.mode mengalahkan nilai tersebut. Vending mengembalikan mode=null dan slot_count.
+- Device Key hanya dicetak untuk device yang baru dibuat; seed kedua kali tidak dapat menampilkan ulang key karena database hanya menyimpan hash.
+- P5 tidak menambah endpoint atau token Admin. P14 wajib memastikan semua route /admin/* hanya menerima session cookie dan menolak header Authorization (Section 16 #17).
+- CLOCK_SKEW disediakan sebagai domain error handler 409; pemeriksaan timestamp request akan diterapkan pada fase transaksi.

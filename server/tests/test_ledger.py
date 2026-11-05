@@ -7,9 +7,6 @@ from contextlib import redirect_stdout
 from io import StringIO
 
 import pytest
-from sqlalchemy import create_engine, event, select, text
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import sessionmaker
 
 from app.models import Base, Member, Transaction
 from app.services.ledger import (
@@ -17,6 +14,9 @@ from app.services.ledger import (
     InsufficientBalance,
     LedgerService,
 )
+from sqlalchemy import create_engine, event, select, text
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import sessionmaker
 
 
 @pytest.fixture

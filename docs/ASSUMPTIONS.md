@@ -46,8 +46,6 @@
 - Reversal tidak mengubah transaksi original; baris ADJUSTMENT baru memakai arah kebalikan dan `ref_txn_id`. Dispense gagal menyimpan status `DISPENSE_FAILED` pada debit awal dan, bila auto-refund aktif, menambahkan baris REFUND CREDIT. Source refund disimpan sebagai `ADMIN` karena CHECK schema hanya mengizinkan ONLINE/OFFLINE_SYNC/ADMIN; pelaku tetap `SYSTEM`.
 - CLI menganggap hanya status COMPLETED, PENDING_DISPENSE, DISPENSE_FAILED, dan REVERSED sebagai baris yang memengaruhi invariant; REJECTED tidak mengubah saldo dan tidak dihitung.
 
-- CI validation P4 dijalankan melalui pull request sementara agar status job dan log dapat diperiksa; hasil akhir dicatat setelah Ruff dan Pytest selesai.
-
 - CI P4 final: workflow run 116 (https://github.com/Wiladulh/M-Group-Platform/actions/runs/41959352025) selesai sukses pada kedua job, Ruff dan Pytest. Pytest melaporkan 71 passed; coverage security 96.40%.
 - Concurrency P4: 10 thread, 5 debit berhasil dan 5 ditolak InsufficientBalance, saldo akhir 0; invariant tetap benar. Test memakai saldo pembuka sebagai transaksi TOPUP test-only agar invariant dimulai dari ledger yang seimbang.
 - Verifikasi ledger test seed: output CLI yang diuji adalah `OK: 5 members verified`; seed hanya dibuat di test dan tidak ditambahkan ke data produksi.

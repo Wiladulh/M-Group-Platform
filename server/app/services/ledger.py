@@ -1,4 +1,9 @@
-"""Atomic, append-only member balance ledger service."""
+"""Atomic, append-only member balance ledger service.
+
+The compositional _debit_internal() and _credit_internal() methods never commit.
+Callers MUST invoke them inside `with session.begin():` so the balance update,
+ledger row, allowance refresh, and any co-writes share one transaction.
+"""
 
 from __future__ import annotations
 
@@ -35,7 +40,7 @@ class IdempotencyConflict(LedgerError):
 
 
 class LedgerService:
-    """Session-bound ledger service; each public mutation owns one DB transaction."""
+    """Session-bound ledger service with atomic public and compositional mutations."""
 
     def __init__(self, session: Session) -> None:
         self.session = session
@@ -163,7 +168,7 @@ class LedgerService:
         self.session.flush()
         return row
 
-    def debit(
+    def _debit_internal(
         self,
         member_id: int,
         amount: int,
@@ -180,6 +185,11 @@ class LedgerService:
         performed_by_id: str | None,
         card_inactive_at_sync: bool = False,
     ) -> Transaction:
+        """Perform a debit inside the caller's active transaction. The caller owns commit/rollback and all co-writes."""
+        if not self.session.in_transaction():
+            raise LedgerError(
+                "_debit_internal must be called inside an active transaction"
+            )
         self._validate_amount(amount)
         occurred_at = self._utc(occurred_at) if occurred_at is not None else None
         payload = dict(
@@ -197,31 +207,65 @@ class LedgerService:
             performed_by_id=performed_by_id,
             card_inactive_at_sync=card_inactive_at_sync,
         )
+        self._check_idempotency(txn_uuid, payload)
+        before, after = self._change_balance(member_id, amount, debit=True)
+        row = self._insert(
+            txn_uuid=txn_uuid,
+            member_id=member_id,
+            amount=amount,
+            direction="DEBIT",
+            type=type,
+            source=source,
+            before=before,
+            after=after,
+            performed_by_type=performed_by_type,
+            performed_by_id=performed_by_id,
+            card_id=card_id,
+            device_id=device_id,
+            items_json=items_json,
+            note=note,
+            occurred_at=occurred_at,
+            card_inactive_at_sync=card_inactive_at_sync,
+        )
+        self._refresh_allowances(member_id)
+        return row
+
+
+    def debit(
+        self,
+        member_id: int,
+        amount: int,
+        *,
+        txn_uuid: str,
+        card_id: int | None,
+        device_id: int | None,
+        type: str,
+        source: str,
+        items_json: str | None = None,
+        note: str | None = None,
+        occurred_at: datetime | None = None,
+        performed_by_type: str,
+        performed_by_id: str | None,
+        card_inactive_at_sync: bool = False,
+    ) -> Transaction:
         with self.session.begin():
-            self._check_idempotency(txn_uuid, payload)
-            before, after = self._change_balance(member_id, amount, debit=True)
-            row = self._insert(
-                txn_uuid=txn_uuid,
+            return self._debit_internal(
                 member_id=member_id,
                 amount=amount,
-                direction="DEBIT",
-                type=type,
-                source=source,
-                before=before,
-                after=after,
-                performed_by_type=performed_by_type,
-                performed_by_id=performed_by_id,
+                txn_uuid=txn_uuid,
                 card_id=card_id,
                 device_id=device_id,
+                type=type,
+                source=source,
                 items_json=items_json,
                 note=note,
                 occurred_at=occurred_at,
+                performed_by_type=performed_by_type,
+                performed_by_id=performed_by_id,
                 card_inactive_at_sync=card_inactive_at_sync,
             )
-            self._refresh_allowances(member_id)
-            return row
 
-    def credit(
+    def _credit_internal(
         self,
         member_id: int,
         amount: int,
@@ -239,6 +283,11 @@ class LedgerService:
         card_inactive_at_sync: bool = False,
         ref_txn_id: int | None = None,
     ) -> Transaction:
+        """Perform a credit inside the caller's active transaction. The caller owns commit/rollback and all co-writes."""
+        if not self.session.in_transaction():
+            raise LedgerError(
+                "_credit_internal must be called inside an active transaction"
+            )
         self._validate_amount(amount)
         if type not in {"TOPUP", "REFUND", "ADJUSTMENT"}:
             raise LedgerError("Credit supports TOPUP, REFUND, or ADJUSTMENT only")
@@ -259,30 +308,66 @@ class LedgerService:
             performed_by_id=performed_by_id,
             card_inactive_at_sync=card_inactive_at_sync,
         )
+        self._check_idempotency(txn_uuid, payload)
+        before, after = self._change_balance(member_id, amount, debit=False)
+        row = self._insert(
+            txn_uuid=txn_uuid,
+            member_id=member_id,
+            amount=amount,
+            direction="CREDIT",
+            type=type,
+            source=source,
+            before=before,
+            after=after,
+            performed_by_type=performed_by_type,
+            performed_by_id=performed_by_id,
+            card_id=card_id,
+            device_id=device_id,
+            items_json=items_json,
+            note=note,
+            occurred_at=occurred_at,
+            card_inactive_at_sync=card_inactive_at_sync,
+            ref_txn_id=ref_txn_id,
+        )
+        self._refresh_allowances(member_id)
+        return row
+
+
+    def credit(
+        self,
+        member_id: int,
+        amount: int,
+        *,
+        txn_uuid: str,
+        card_id: int | None = None,
+        device_id: int | None = None,
+        type: str = "TOPUP",
+        source: str = "ADMIN",
+        items_json: str | None = None,
+        note: str | None = None,
+        occurred_at: datetime | None = None,
+        performed_by_type: str = "ADMIN",
+        performed_by_id: str | None = None,
+        card_inactive_at_sync: bool = False,
+        ref_txn_id: int | None = None,
+    ) -> Transaction:
         with self.session.begin():
-            self._check_idempotency(txn_uuid, payload)
-            before, after = self._change_balance(member_id, amount, debit=False)
-            row = self._insert(
-                txn_uuid=txn_uuid,
+            return self._credit_internal(
                 member_id=member_id,
                 amount=amount,
-                direction="CREDIT",
-                type=type,
-                source=source,
-                before=before,
-                after=after,
-                performed_by_type=performed_by_type,
-                performed_by_id=performed_by_id,
+                txn_uuid=txn_uuid,
                 card_id=card_id,
                 device_id=device_id,
+                type=type,
+                source=source,
                 items_json=items_json,
                 note=note,
                 occurred_at=occurred_at,
+                performed_by_type=performed_by_type,
+                performed_by_id=performed_by_id,
                 card_inactive_at_sync=card_inactive_at_sync,
                 ref_txn_id=ref_txn_id,
             )
-            self._refresh_allowances(member_id)
-            return row
 
     def reverse(
         self,

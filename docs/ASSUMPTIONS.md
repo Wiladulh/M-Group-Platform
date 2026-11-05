@@ -58,3 +58,9 @@
 - Pytest coverage scope diperluas dari `app/security` menjadi seluruh package `app` (`--cov=app`); threshold tetap 70% dan tidak ada module yang dikecualikan.
 - Baseline sebelum perubahan ini: P5 CI hanya mengukur `app/security` (96.30% pada run 42026075969); angka tersebut bukan baseline coverage seluruh aplikasi.
 - Hasil CI scope seluruh `app`: **89.00%** (873 statements, 96 missed), 86 tests passed. Tidak ada module di bawah 70%; terendah `app/services/settings.py` 73% (37 statements), lalu `app/services/ledger.py` 75% (126), `app/services/allowance.py` 75% (56), dan `app/cli.py` 72% (82).
+
+
+## P4 patch — composable ledger mutations
+- `_debit_internal()` dan `_credit_internal()` hanya boleh dipanggil di dalam transaksi aktif; keduanya tidak melakukan commit/rollback. Caller bertanggung jawab membungkus seluruh perubahan ledger, allowance, dan co-write (misalnya audit/PIN reset) dalam satu `session.begin()`.
+- Public `debit()` dan `credit()` tetap aman secara default dan tetap membuka satu transaksi sendiri sebelum memanggil method internal.
+- `reverse()` dan metode perubahan status dispense tetap memiliki transaksi sendiri; akan direfaktor saat komposisi dibutuhkan oleh P6 vending atau P8 admin topup.

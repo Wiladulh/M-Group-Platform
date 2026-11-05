@@ -7,7 +7,7 @@ from contextlib import redirect_stdout
 from io import StringIO
 
 import pytest
-from app.models import Base, Member, Transaction
+from app.models import AuditLog, Base, Device, Member, OfflineAllowance, Transaction
 from app.services.ledger import (
     IdempotencyConflict,
     InsufficientBalance,
@@ -319,6 +319,152 @@ def test_ledger_invariant_after_random_ops(db, monkeypatch):
     with redirect_stdout(output):
         assert cli.verify_ledger() == 0
     assert "OK: 5 members verified" in output.getvalue()
+
+
+
+def _internal_debit(service, member_id, txn_uuid="internal-debit"):
+    return service._debit_internal(
+        member_id,
+        5_000,
+        txn_uuid=txn_uuid,
+        card_id=None,
+        device_id=None,
+        type="PAYMENT",
+        source="ONLINE",
+        performed_by_type="DEVICE",
+        performed_by_id="CSH-001",
+    )
+
+
+def _add_offline_device(factory, device_id="CSH-OFFLINE"):
+    with factory.begin() as session:
+        session.add(
+            Device(
+                device_id=device_id,
+                name="Offline test device",
+                type="cashier",
+                token_hash=f"hash-{device_id}",
+                status="ACTIVE",
+                slot_count=0,
+                config_json='{"offline_enabled":true}',
+            )
+        )
+
+
+def test_debit_internal_requires_active_transaction(db):
+    _, factory = db
+    member_id = add_member(factory)
+    with factory() as session:
+        service = LedgerService(session)
+        with pytest.raises(Exception, match="_debit_internal must be called inside an active transaction"):
+            _internal_debit(service, member_id)
+
+
+def test_debit_internal_rolls_back_on_exception(db):
+    _, factory = db
+    member_id = add_member(factory)
+    _add_offline_device(factory)
+    with factory.begin() as session:
+        from app.services.allowance import AllowanceService
+
+        AllowanceService(session).apply_allowances(member_id)
+    with factory() as session:
+        service = LedgerService(session)
+        with pytest.raises(RuntimeError, match="force rollback"):
+            with session.begin():
+                _internal_debit(service, member_id, "rollback-debit")
+                raise RuntimeError("force rollback")
+    with factory() as session:
+        assert session.get(Member, member_id).balance == 10_000
+        assert session.scalar(
+            select(Transaction.id).where(Transaction.txn_uuid == "rollback-debit")
+        ) is None
+        allowance = session.scalar(
+            select(OfflineAllowance).where(OfflineAllowance.member_id == member_id)
+        )
+        assert allowance.amount == 10_000
+        assert allowance.version == 1
+
+
+def test_compositional_debit_plus_audit_in_one_transaction(db):
+    _, factory = db
+    member_id = add_member(factory)
+    with factory() as session:
+        service = LedgerService(session)
+        with session.begin():
+            _internal_debit(service, member_id, "composed-commit")
+            session.add(
+                AuditLog(
+                    actor_type="DEVICE",
+                    actor_id="CSH-001",
+                    action="TEST_DEBIT",
+                    entity="member",
+                    entity_id=str(member_id),
+                )
+            )
+    with factory() as session:
+        assert session.get(Member, member_id).balance == 5_000
+        assert session.scalar(
+            select(Transaction.id).where(Transaction.txn_uuid == "composed-commit")
+        ) is not None
+        assert session.scalar(
+            select(AuditLog.id).where(AuditLog.action == "TEST_DEBIT")
+        ) is not None
+
+    with factory() as session:
+        service = LedgerService(session)
+        with pytest.raises(RuntimeError, match="force rollback"):
+            with session.begin():
+                _internal_debit(service, member_id, "composed-rollback")
+                session.add(
+                    AuditLog(
+                        actor_type="DEVICE",
+                        actor_id="CSH-001",
+                        action="TEST_DEBIT_ROLLBACK",
+                        entity="member",
+                        entity_id=str(member_id),
+                    )
+                )
+                raise RuntimeError("force rollback")
+    with factory() as session:
+        assert session.get(Member, member_id).balance == 5_000
+        assert session.scalar(
+            select(Transaction.id).where(Transaction.txn_uuid == "composed-rollback")
+        ) is None
+        assert session.scalar(
+            select(AuditLog.id).where(AuditLog.action == "TEST_DEBIT_ROLLBACK")
+        ) is None
+
+
+def test_allowance_recomputed_after_compositional_debit(db):
+    _, factory = db
+    member_id = add_member(factory)
+    _add_offline_device(factory)
+    with factory.begin() as session:
+        from app.services.allowance import AllowanceService
+
+        AllowanceService(session).apply_allowances(member_id)
+    with factory() as session:
+        service = LedgerService(session)
+        with session.begin():
+            service._debit_internal(
+                member_id,
+                4_000,
+                txn_uuid="allowance-composed",
+                card_id=None,
+                device_id=None,
+                type="PAYMENT",
+                source="ONLINE",
+                performed_by_type="DEVICE",
+                performed_by_id="CSH-001",
+            )
+    with factory() as session:
+        allowance = session.scalar(
+            select(OfflineAllowance).where(OfflineAllowance.member_id == member_id)
+        )
+        assert session.get(Member, member_id).balance == 6_000
+        assert allowance.amount == 6_000
+        assert allowance.version == 2
 
 
 def test_negative_balance_db_rejected(db):

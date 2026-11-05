@@ -218,9 +218,8 @@ def test_encryption_rejects_all_zero_data_key(monkeypatch: pytest.MonkeyPatch) -
 
 
 def test_config_rejects_all_zero_data_key() -> None:
-    from pydantic import ValidationError
-
     from app.config import Settings
+    from pydantic import ValidationError
 
     encoded = base64.urlsafe_b64encode(bytes(32)).decode("ascii")
     with pytest.raises(ValidationError, match="tidak boleh seluruhnya nol"):

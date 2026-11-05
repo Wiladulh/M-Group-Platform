@@ -1,3 +1,1 @@
 """Pydantic response schemas."""
-
-

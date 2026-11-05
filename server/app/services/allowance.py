@@ -27,7 +27,7 @@ class AllowanceService:
 
     def compute_allowances_for_member(self, member_id: int) -> dict[int, int]:
         member = self.session.get(Member, member_id)
-        if member is None:
+        if member is None or member.status != "ACTIVE":
             return {}
         devices = self.session.scalars(
             select(Device).where(Device.status == "ACTIVE")

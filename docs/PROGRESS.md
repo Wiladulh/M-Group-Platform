@@ -44,10 +44,10 @@
 - Security primitives dan pengujian selesai pada commit `b86e533bced8dd0ae09f036333bf901f79fd6d31`.
 - P3 adalah implementasi security primitives; baris roadmap lama yang menyebut P3 sebagai WebSocket telah dikoreksi.
 
-## Catatan P4 — implementasi berjalan
+## Catatan P4 — DONE
 - Ledger service, allowance MVP, CLI verify-ledger, dan test suite P4 sudah ditambahkan ke branch `main`.
-- Commit implementasi terakhir saat catatan ini ditulis: `b995e41f9200b41d5ee82a74306972b02829a8d2`.
-- Pengujian concurrency menggunakan 10 thread pada file-backed SQLite, WAL, busy_timeout 30 detik, dan transaksi `BEGIN IMMEDIATE`; hasil final menunggu CI.
+- Commit implementasi P4: `e9205b8bfd909a3045751373794f9045ba2daa96`.
+- Pengujian concurrency menggunakan 10 thread pada file-backed SQLite, WAL, busy_timeout 30 detik, dan transaksi `BEGIN IMMEDIATE`; hasil final: 5 berhasil, 5 ditolak, saldo akhir 0.
 - P4 selesai: kedua job CI (Ruff dan Pytest) sukses pada workflow run 116; 71 tes lulus termasuk concurrency test 10 thread.
 
 - CI P4: https://github.com/Wiladulh/M-Group-Platform/actions/runs/41959352025 (Ruff SUCCESS, Pytest SUCCESS; 71 passed).

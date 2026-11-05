@@ -1,4 +1,4 @@
-"""Minimum viable offline allowance computation (full cache/WS flow in P9)."""
+"""Minimum viable offline allowance calculation (cache and WS flow is completed in P9)."""
 
 import json
 from datetime import UTC, datetime
@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.db import SessionLocal
 from app.models import Device, Member, OfflineAllowance, Setting
 
 
@@ -50,25 +51,30 @@ class AllowanceService:
         }
 
     def apply_allowances(self, member_id: int) -> None:
-        """Persist computed allowance rows; WebSocket propagation is deferred to P9."""
+        """Persist allowance rows; P9 adds ordered WebSocket cache updates."""
         allowances = self.compute_allowances_for_member(member_id)
         now = datetime.now(UTC)
+        existing_rows = self.session.scalars(
+            select(OfflineAllowance).where(OfflineAllowance.member_id == member_id)
+        ).all()
+        existing_by_device = {row.device_id: row for row in existing_rows}
+        for device_id, row in existing_by_device.items():
+            if device_id not in allowances:
+                row.amount = 0
+                row.computed_at = now
+                row.version += 1
         for device_id, amount in allowances.items():
-            row = self.session.scalar(
-                select(OfflineAllowance).where(
-                    OfflineAllowance.member_id == member_id,
-                    OfflineAllowance.device_id == device_id,
-                )
-            )
+            row = existing_by_device.get(device_id)
             if row is None:
-                row = OfflineAllowance(
-                    member_id=member_id,
-                    device_id=device_id,
-                    amount=amount,
-                    computed_at=now,
-                    version=1,
+                self.session.add(
+                    OfflineAllowance(
+                        member_id=member_id,
+                        device_id=device_id,
+                        amount=amount,
+                        computed_at=now,
+                        version=1,
+                    )
                 )
-                self.session.add(row)
             else:
                 row.amount = amount
                 row.computed_at = now
@@ -76,11 +82,13 @@ class AllowanceService:
         self.session.flush()
 
 
-def compute_allowances_for_member(member_id: int, session: Session) -> dict[int, int]:
-    """Functional entry point for callers that prefer an explicit session."""
-    return AllowanceService(session).compute_allowances_for_member(member_id)
+def compute_allowances_for_member(member_id: int) -> dict[int, int]:
+    """Compute allowance map using the configured application database."""
+    with SessionLocal() as session:
+        return AllowanceService(session).compute_allowances_for_member(member_id)
 
 
-def apply_allowances(member_id: int, session: Session) -> None:
-    """Functional entry point for callers that prefer an explicit session."""
-    AllowanceService(session).apply_allowances(member_id)
+def apply_allowances(member_id: int) -> None:
+    """Persist allowances using the configured application database."""
+    with SessionLocal.begin() as session:
+        AllowanceService(session).apply_allowances(member_id)

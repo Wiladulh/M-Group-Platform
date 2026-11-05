@@ -2,9 +2,10 @@
 
 import argparse
 
+from sqlalchemy import func, select
+
 from app.db import SessionLocal
 from app.models import Member, Transaction
-from sqlalchemy import func, select
 
 
 BALANCE_STATUSES = (

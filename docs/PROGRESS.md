@@ -7,7 +7,7 @@
 | P1 | Server skeleton: packaging, settings, SQLite engine, FastAPI health endpoint, dan Alembic environment | DONE | 766145683b6025a4b4cad756cf8fd41e00a199b6 |
 | P2 | Full database schema + migration: 19 SQLAlchemy models, Alembic revision 0001, constraints/indexes, schema tests dan DB_SCHEMA.md | DONE | 31405495385b7f3aa792ece0b036a0015d8d3eed |
 | P3 | Security primitives (Argon2id, PIN, encryption, token, CSRF) | DONE | b86e533bced8dd0ae09f036333bf901f79fd6d31 |
-| P4 | Ledger service, atomic debit/credit, allowance MVP, verify-ledger CLI, dan concurrency tests | IN PROGRESS | b995e41f9200b41d5ee82a74306972b02829a8d2 |
+| P4 | Ledger service, atomic debit/credit, allowance MVP, verify-ledger CLI, dan concurrency tests | DONE | e9205b8bfd909a3045751373794f9045ba2daa96 |
 | Berikutnya | Fase server lanjutan, transaksi API (P6), WebSocket/binding/offline sync, lalu WebUI dan firmware sesuai prompt fase berikutnya | Belum dimulai | — |
 
 ## Catatan
@@ -48,4 +48,6 @@
 - Ledger service, allowance MVP, CLI verify-ledger, dan test suite P4 sudah ditambahkan ke branch `main`.
 - Commit implementasi terakhir saat catatan ini ditulis: `b995e41f9200b41d5ee82a74306972b02829a8d2`.
 - Pengujian concurrency menggunakan 10 thread pada file-backed SQLite, WAL, busy_timeout 30 detik, dan transaksi `BEGIN IMMEDIATE`; hasil final menunggu CI.
-- P4 belum dinyatakan DONE sampai kedua job CI (Ruff dan Pytest) sukses dan hasil concurrency test diverifikasi.
+- P4 selesai: kedua job CI (Ruff dan Pytest) sukses pada workflow run 116; 71 tes lulus termasuk concurrency test 10 thread.
+
+- CI P4: https://github.com/Wiladulh/M-Group-Platform/actions/runs/41959352025 (Ruff SUCCESS, Pytest SUCCESS; 71 passed).

@@ -129,11 +129,13 @@ class LedgerService:
         with self.session.begin():
             self._check_idempotency(txn_uuid, payload)
             before, after = self._change_balance(member_id, amount, debit=True)
-            return self._insert(txn_uuid=txn_uuid, member_id=member_id, amount=amount,
+            row = self._insert(txn_uuid=txn_uuid, member_id=member_id, amount=amount,
                 direction="DEBIT", type=type, source=source, before=before, after=after,
                 performed_by_type=performed_by_type, performed_by_id=performed_by_id,
                 card_id=card_id, device_id=device_id, items_json=items_json, note=note,
                 occurred_at=occurred_at, card_inactive_at_sync=card_inactive_at_sync)
+            self._refresh_allowances(member_id)
+            return row
 
     def credit(self, member_id: int, amount: int, *, txn_uuid: str,
                card_id: int | None = None, device_id: int | None = None,
@@ -153,12 +155,14 @@ class LedgerService:
         with self.session.begin():
             self._check_idempotency(txn_uuid, payload)
             before, after = self._change_balance(member_id, amount, debit=False)
-            return self._insert(txn_uuid=txn_uuid, member_id=member_id, amount=amount,
+            row = self._insert(txn_uuid=txn_uuid, member_id=member_id, amount=amount,
                 direction="CREDIT", type=type, source=source, before=before, after=after,
                 performed_by_type=performed_by_type, performed_by_id=performed_by_id,
                 card_id=card_id, device_id=device_id, items_json=items_json, note=note,
                 occurred_at=occurred_at, card_inactive_at_sync=card_inactive_at_sync,
                 ref_txn_id=ref_txn_id)
+            self._refresh_allowances(member_id)
+            return row
 
     def reverse(self, original_txn_id: int, *, reason: str,
                 performed_by_type: str, performed_by_id: str | None) -> Transaction:
@@ -172,12 +176,14 @@ class LedgerService:
                 raise LedgerError("Transaction has already been reversed")
             debit = original.direction == "CREDIT"
             before, after = self._change_balance(original.member_id, original.amount, debit=debit)
-            return self._insert(txn_uuid=str(uuid4()), member_id=original.member_id,
+            row = self._insert(txn_uuid=str(uuid4()), member_id=original.member_id,
                 amount=original.amount, direction="DEBIT" if debit else "CREDIT",
                 type="ADJUSTMENT", source="ADMIN", before=before, after=after,
                 performed_by_type=performed_by_type, performed_by_id=performed_by_id,
                 card_id=original.card_id, device_id=original.device_id, note=reason,
                 ref_txn_id=original.id)
+            self._refresh_allowances(original.member_id)
+            return row
 
     def _set_status(self, txn_id: int, status: str, allowed: set[str]) -> None:
         with self.session.begin():
@@ -201,9 +207,16 @@ class LedgerService:
             if not auto_refund:
                 return original
             before, after = self._change_balance(original.member_id, original.amount, debit=False)
-            return self._insert(txn_uuid=str(uuid4()), member_id=original.member_id,
+            row = self._insert(txn_uuid=str(uuid4()), member_id=original.member_id,
                 amount=original.amount, direction="CREDIT", type="REFUND", source="ADMIN",
                 before=before, after=after, performed_by_type="SYSTEM", performed_by_id="SYSTEM",
                 card_id=original.card_id, device_id=original.device_id,
                 note=f"Automatic refund for failed dispense transaction {original.id}",
                 ref_txn_id=original.id)
+            self._refresh_allowances(original.member_id)
+            return row
+
+    def _refresh_allowances(self, member_id: int) -> None:
+        from app.services.allowance import AllowanceService
+
+        AllowanceService(self.session).apply_allowances(member_id)

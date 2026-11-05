@@ -66,9 +66,9 @@ class LedgerService:
                 stored_at = stored_at.replace(tzinfo=UTC)
             if stored_at != expected_at:
                 return False
-        if "ref_txn_id" in payload and existing.ref_txn_id != payload["ref_txn_id"]:
-            return False
-        return True
+        return not (
+            "ref_txn_id" in payload and existing.ref_txn_id != payload["ref_txn_id"]
+        )
 
     def _check_idempotency(self, txn_uuid: str, payload: dict) -> None:
         existing = self.session.scalar(

@@ -53,3 +53,8 @@
 ## P3 patch — reject all-zero DATA_KEY
 - Settings.data_key dan _load_fernet_key() sama-sama menolak key Base64 yang mendekode menjadi 32 byte nol; key wajib berisi setidaknya satu byte non-zero.
 - Regression tests mencakup validator Settings, loader Fernet, key acak 32 byte, dan key acak per-session pytest.
+
+## Coverage patch — measure the complete app package
+- Pytest coverage scope diperluas dari `app/security` menjadi seluruh package `app` (`--cov=app`); threshold tetap 70% dan tidak ada module yang dikecualikan.
+- Baseline sebelum perubahan ini: P5 CI hanya mengukur `app/security` (96.30% pada run 42026075969); angka tersebut bukan baseline coverage seluruh aplikasi.
+- Coverage total dan module di bawah 70% akan dicatat berdasarkan hasil CI pertama dengan scope `app`.

@@ -49,4 +49,4 @@ ignore = ["E501"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["."]
-addopts = "-q --cov=app/security --cov-report=term-missing --cov-fail-under=70"
+addopts = "-q --cov=app --cov-report=term-missing --cov-fail-under=70"

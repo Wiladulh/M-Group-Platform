@@ -11,6 +11,7 @@ from app.models import AuditLog, Base, Device, Member, OfflineAllowance, Transac
 from app.services.ledger import (
     IdempotencyConflict,
     InsufficientBalance,
+    LedgerError,
     LedgerService,
 )
 from sqlalchemy import create_engine, event, select, text
@@ -356,7 +357,7 @@ def test_debit_internal_requires_active_transaction(db):
     member_id = add_member(factory)
     with factory() as session:
         service = LedgerService(session)
-        with pytest.raises(Exception, match="_debit_internal must be called inside an active transaction"):
+        with pytest.raises(LedgerError, match="_debit_internal must be called inside an active transaction"):
             _internal_debit(service, member_id)
 
 
@@ -370,8 +371,7 @@ def test_debit_internal_rolls_back_on_exception(db):
         AllowanceService(session).apply_allowances(member_id)
     with factory() as session:
         service = LedgerService(session)
-        with pytest.raises(RuntimeError, match="force rollback"):
-            with session.begin():
+        with pytest.raises(RuntimeError, match="force rollback"), session.begin():
                 _internal_debit(service, member_id, "rollback-debit")
                 raise RuntimeError("force rollback")
     with factory() as session:

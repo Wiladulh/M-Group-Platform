@@ -1,6 +1,7 @@
 """Exhaustive tests for the pure security primitives."""
 
 import base64
+import os
 
 import pytest
 from app.security.csrf import generate_csrf_token, verify_csrf_token
@@ -207,6 +208,36 @@ def test_csrf_token_generate_and_verify() -> None:
     assert token
     assert verify_csrf_token(token, token)
     assert not verify_csrf_token(token, token + "x")
+
+
+
+def test_encryption_rejects_all_zero_data_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    _set_data_key(monkeypatch, bytes(32))
+    with pytest.raises(ValueError, match="tidak boleh seluruhnya nol"):
+        _load_fernet_key()
+
+
+def test_config_rejects_all_zero_data_key() -> None:
+    from pydantic import ValidationError
+
+    from app.config import Settings
+
+    encoded = base64.urlsafe_b64encode(bytes(32)).decode("ascii")
+    with pytest.raises(ValidationError, match="tidak boleh seluruhnya nol"):
+        Settings(data_key=encoded)
+
+
+def test_encryption_still_accepts_random_32_bytes(monkeypatch: pytest.MonkeyPatch) -> None:
+    import secrets
+
+    _set_data_key(monkeypatch, secrets.token_bytes(32))
+    assert len(_load_fernet_key()) == 44
+
+
+def test_conftest_per_session_key_is_not_zero() -> None:
+    raw = base64.urlsafe_b64decode(os.environ["DATA_KEY"])
+    assert len(raw) == 32
+    assert any(raw)
 
 
 def test_load_fernet_key_rejects_non_base64(monkeypatch: pytest.MonkeyPatch) -> None:

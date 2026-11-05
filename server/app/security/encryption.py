@@ -20,6 +20,8 @@ def _load_fernet_key() -> bytes:
         raise ValueError("DATA_KEY harus berupa Base64 yang valid") from exc
     if len(raw) != 32:
         raise ValueError("DATA_KEY harus mendekode tepat 32 byte")
+    if not any(raw):
+        raise ValueError("DATA_KEY tidak boleh seluruhnya nol")
     return base64.urlsafe_b64encode(raw)
 
 

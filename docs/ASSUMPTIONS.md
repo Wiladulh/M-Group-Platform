@@ -48,3 +48,8 @@
 - Session dependency request-scoped melakukan commit setelah request sukses, rollback saat exception, dan selalu close; dependency yang sama dipakai oleh auth dan handler endpoint.
 - Kegagalan auth tidak mengubah last_seen_at/last_ip; presence hanya diperbarui setelah status ACTIVE dan token terverifikasi.
 - CI final P5 pada run 42026075969: Ruff SUCCESS, Pytest SUCCESS (82 passed, 1 warning, security coverage 96.30%).
+
+
+## P3 patch — reject all-zero DATA_KEY
+- Settings.data_key dan _load_fernet_key() sama-sama menolak key Base64 yang mendekode menjadi 32 byte nol; key wajib berisi setidaknya satu byte non-zero.
+- Regression tests mencakup validator Settings, loader Fernet, key acak 32 byte, dan key acak per-session pytest.

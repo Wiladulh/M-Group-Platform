@@ -39,6 +39,8 @@ class Settings(BaseSettings):
             raise ValueError("DATA_KEY must be valid base64") from exc
         if len(decoded) != 32:
             raise ValueError("DATA_KEY must decode to exactly 32 bytes")
+        if not any(decoded):
+            raise ValueError("DATA_KEY tidak boleh seluruhnya nol")
         return value
 
 

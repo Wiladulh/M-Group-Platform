@@ -57,7 +57,18 @@ class LedgerService:
             "source", "items_json", "note", "performed_by_type", "performed_by_id",
             "card_inactive_at_sync",
         )
-        return all(getattr(existing, key) == payload[key] for key in fields)
+        if not all(getattr(existing, key) == payload[key] for key in fields):
+            return False
+        expected_at = payload.get("occurred_at")
+        if expected_at is not None:
+            stored_at = existing.occurred_at
+            if stored_at.tzinfo is None:
+                stored_at = stored_at.replace(tzinfo=UTC)
+            if stored_at != expected_at:
+                return False
+        if "ref_txn_id" in payload and existing.ref_txn_id != payload["ref_txn_id"]:
+            return False
+        return True
 
     def _check_idempotency(self, txn_uuid: str, payload: dict) -> None:
         existing = self.session.scalar(
@@ -123,9 +134,11 @@ class LedgerService:
               note: str | None = None, occurred_at: datetime | None = None,
               performed_by_type: str, performed_by_id: str | None,
               card_inactive_at_sync: bool = False) -> Transaction:
+        self._validate_amount(amount)
+        occurred_at = self._utc(occurred_at) if occurred_at is not None else None
         payload = dict(member_id=member_id, card_id=card_id, device_id=device_id, type=type,
                        amount=amount, direction="DEBIT", source=source, items_json=items_json,
-                       note=note, performed_by_type=performed_by_type,
+                       note=note, occurred_at=occurred_at, performed_by_type=performed_by_type,
                        performed_by_id=performed_by_id,
                        card_inactive_at_sync=card_inactive_at_sync)
         with self.session.begin():
@@ -149,10 +162,11 @@ class LedgerService:
         self._validate_amount(amount)
         if type not in {"TOPUP", "REFUND", "ADJUSTMENT"}:
             raise LedgerError("Credit supports TOPUP, REFUND, or ADJUSTMENT only")
+        occurred_at = self._utc(occurred_at) if occurred_at is not None else None
         payload = dict(member_id=member_id, card_id=card_id, device_id=device_id, type=type,
                        amount=amount, direction="CREDIT", source=source, items_json=items_json,
-                       note=note, performed_by_type=performed_by_type,
-                       performed_by_id=performed_by_id,
+                       note=note, occurred_at=occurred_at, ref_txn_id=ref_txn_id,
+                       performed_by_type=performed_by_type, performed_by_id=performed_by_id,
                        card_inactive_at_sync=card_inactive_at_sync)
         with self.session.begin():
             self._check_idempotency(txn_uuid, payload)

@@ -2,7 +2,6 @@
 
 import random
 import threading
-
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import redirect_stdout
 from io import StringIO

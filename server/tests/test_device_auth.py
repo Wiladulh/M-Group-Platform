@@ -81,6 +81,7 @@ def test_require_device_returns_auth_info(tmp_path, monkeypatch):
 
     def auth_info_endpoint(device: DeviceAuthInfo = Depends(require_device)):
         return {
+            "class": type(device).__name__,
             "id": device.id,
             "device_id": device.device_id,
             "name": device.name,
@@ -100,6 +101,7 @@ def test_require_device_returns_auth_info(tmp_path, monkeypatch):
             )
         assert response.status_code == 200
         assert response.json() == {
+            "class": "DeviceAuthInfo",
             "id": 1,
             "device_id": "CSH-001",
             "name": "Cashier Test",

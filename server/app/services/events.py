@@ -1,8 +1,8 @@
 """In-process domain events with commit-aware publication."""
 
 import logging
-from dataclasses import dataclass
 from collections.abc import Callable
+from dataclasses import dataclass
 
 from sqlalchemy import event
 from sqlalchemy.orm import Session

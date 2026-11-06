@@ -8,9 +8,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import get_session
-from app.models import CatalogMeta, Device
+from app.models import CatalogMeta
 from app.schemas.device import DeviceConfigResponse
-from app.security.device_auth import require_device
+from app.security.device_auth import DeviceAuthInfo, require_device
 from app.services.settings import get_setting
 
 router = APIRouter(
@@ -28,7 +28,7 @@ DEFAULTS = {
 
 @router.get("/config", response_model=DeviceConfigResponse)
 def get_device_config(
-    device: Device = Depends(require_device),  # noqa: B008
+    device: DeviceAuthInfo = Depends(require_device),  # noqa: B008
     session: Session = Depends(get_session),  # noqa: B008
 ) -> DeviceConfigResponse:
     """Return effective global configuration merged with device overrides."""

@@ -50,7 +50,7 @@ class AdminTopupService:
                 same = (
                     existing.member_id == member_id
                     and existing.amount == amount
-                    and existing.source == "ADMIN"
+                    and existing.source == "WEBUI"
                     and existing.processed_by_type == "ADMIN"
                     and existing.processed_by_id == str(performed_by_admin_id)
                     and existing.note == note
@@ -75,7 +75,7 @@ class AdminTopupService:
                 member_id=member_id,
                 amount=amount,
                 status="COMPLETED",
-                source="ADMIN",
+                source="WEBUI",
                 device_id=None,
                 processed_by_type="ADMIN",
                 processed_by_id=str(performed_by_admin_id),

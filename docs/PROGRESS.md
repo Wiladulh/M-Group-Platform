@@ -66,3 +66,10 @@
 - Migration 0002 memperbolehkan source CASHIER pada ledger.
 - CI P7: [run 42207631202](https://github.com/Wiladulh/M-Group-Platform/actions/runs/42207631202); Ruff SUCCESS, Pytest SUCCESS (**132 passed**), total coverage **90,38%**.
 - Dibanding baseline P6 (117 tests), P7 menambahkan **15 test case efektif** termasuk parameterisasi amount min/max.
+
+
+## P8 — Admin top-up service layer
+- AdminTopupService menyediakan create_topup dan reverse_topup; tidak ada route atau WebUI pada fase ini.
+- Ledger reversal direfaktor menjadi `_reverse_internal()` agar perubahan saldo, reversal ledger, status topup_requests, allowance, dan audit berada dalam satu transaksi.
+- Migration 0003 menambahkan source ADMIN pada topup_requests.
+- Status: menunggu CI hijau sebelum P9.

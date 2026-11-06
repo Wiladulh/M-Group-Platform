@@ -10,6 +10,7 @@ ERROR_MESSAGES = {
     "CLOCK_SKEW": "Jam perangkat tidak sinkron. Hubungi admin.",
     "DUPLICATE_TXN": "Transaksi duplikat",
     "VALIDATION_ERROR": "{detail}",
+    "REVERSE_INSUFFICIENT": "Saldo member sudah terpakai. Gunakan Koreksi Saldo setelah verifikasi.",
     "OPERATOR_INVALID": "Kode atau PIN operator salah",
     "OPERATOR_LOCKED": "Operator terkunci sementara",
 }

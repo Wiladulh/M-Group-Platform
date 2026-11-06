@@ -363,6 +363,48 @@ class LedgerService:
                 ref_txn_id=ref_txn_id,
             )
 
+    def _reverse_internal(
+        self,
+        original_txn_id: int,
+        *,
+        reason: str,
+        performed_by_type: str,
+        performed_by_id: str | None,
+    ) -> Transaction:
+        """Reverse one ledger row inside the caller's active transaction."""
+        if not self.session.in_transaction():
+            raise LedgerError("_reverse_internal must be called inside an active transaction")
+        original = self.session.get(Transaction, original_txn_id)
+        if original is None:
+            raise LedgerError(f"Transaction {original_txn_id} does not exist")
+        if (
+            self.session.scalar(
+                select(Transaction.id).where(Transaction.ref_txn_id == original_txn_id)
+            )
+            is not None
+        ):
+            raise LedgerError("Transaction has already been reversed")
+        debit = original.direction == "CREDIT"
+        before, after = self._change_balance(original.member_id, original.amount, debit=debit)
+        row = self._insert(
+            txn_uuid=str(uuid4()),
+            member_id=original.member_id,
+            amount=original.amount,
+            direction="DEBIT" if debit else "CREDIT",
+            type="ADJUSTMENT",
+            source="ADMIN",
+            before=before,
+            after=after,
+            performed_by_type=performed_by_type,
+            performed_by_id=performed_by_id,
+            card_id=original.card_id,
+            device_id=original.device_id,
+            note=reason,
+            ref_txn_id=original.id,
+        )
+        self._refresh_allowances(original.member_id)
+        return row
+
     def reverse(
         self,
         original_txn_id: int,
@@ -372,36 +414,12 @@ class LedgerService:
         performed_by_id: str | None,
     ) -> Transaction:
         with self.session.begin():
-            original = self.session.get(Transaction, original_txn_id)
-            if original is None:
-                raise LedgerError(f"Transaction {original_txn_id} does not exist")
-            if (
-                self.session.scalar(
-                    select(Transaction.id).where(Transaction.ref_txn_id == original_txn_id)
-                )
-                is not None
-            ):
-                raise LedgerError("Transaction has already been reversed")
-            debit = original.direction == "CREDIT"
-            before, after = self._change_balance(original.member_id, original.amount, debit=debit)
-            row = self._insert(
-                txn_uuid=str(uuid4()),
-                member_id=original.member_id,
-                amount=original.amount,
-                direction="DEBIT" if debit else "CREDIT",
-                type="ADJUSTMENT",
-                source="ADMIN",
-                before=before,
-                after=after,
+            return self._reverse_internal(
+                original_txn_id,
+                reason=reason,
                 performed_by_type=performed_by_type,
                 performed_by_id=performed_by_id,
-                card_id=original.card_id,
-                device_id=original.device_id,
-                note=reason,
-                ref_txn_id=original.id,
             )
-            self._refresh_allowances(original.member_id)
-            return row
 
     def _set_status(self, txn_id: int, status: str, allowed: set[str]) -> None:
         with self.session.begin():

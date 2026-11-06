@@ -89,3 +89,10 @@
 - Request UUID disimpan pada `topup_requests.request_uuid` dan ledger `transactions.txn_uuid`; kedua tabel memiliki unique constraint masing-masing.
 
 - CI final P7 (commit `370d8eedcd495fe3c899b33c1e2b3785e11dd875`): Ruff check + format SUCCESS; Pytest 132 passed; coverage seluruh package app 90,38% (1.310 statements, 126 missed). Tidak ada WebSocket atau Admin WebUI pada P7.
+
+
+## P8 — Admin top-up service layer
+- Top-up admin disimpan dengan `topup_requests.source=ADMIN`; migration 0003 mempertahankan nilai lama WEBUI/CASHIER dan menambahkan ADMIN.
+- `LedgerService._reverse_internal()` adalah primitive komposisional tanpa commit dan wajib dipanggil dalam transaksi aktif; public `reverse()` tetap membuka transaksi sendiri lalu mendelegasikan ke primitive tersebut.
+- AdminTopupService menerima `performed_by_admin_id` dan IP dari caller; service tidak mengelola request/session WebUI, sehingga dapat dipakai kelak oleh handler P14 tanpa coupling HTTP.
+- Reversal top-up hanya dilakukan jika saldo saat ini masih mencukupi seluruh nominal; jika tidak, domain mengembalikan REVERSE_INSUFFICIENT dengan pesan untuk memakai Koreksi Saldo setelah verifikasi.

@@ -133,7 +133,7 @@ class TopUpRequest(TimestampMixin, Base):
         UniqueConstraint("txn_id", name="uq_topup_requests_txn_id"),
         CheckConstraint("amount > 0", name="ck_topup_requests_amount_positive"),
         CheckConstraint("status IN ('COMPLETED', 'REVERSED')", name="ck_topup_requests_status"),
-        CheckConstraint("source IN ('WEBUI', 'CASHIER')", name="ck_topup_requests_source"),
+        CheckConstraint("source IN ('WEBUI', 'CASHIER', 'ADMIN')", name="ck_topup_requests_source"),
         CheckConstraint(
             "processed_by_type IN ('ADMIN', 'OPERATOR')",
             name="ck_topup_requests_processed_by_type",

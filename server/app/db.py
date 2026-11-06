@@ -37,11 +37,10 @@ SessionLocal = sessionmaker(
 
 
 def get_session() -> Generator[Session, None, None]:
-    """Yield one request-scoped session and commit or roll it back atomically."""
+    """Yield a request-scoped session without taking ownership of its commit."""
     session = SessionLocal()
     try:
         yield session
-        session.commit()
     except Exception:
         session.rollback()
         raise

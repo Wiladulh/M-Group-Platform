@@ -57,10 +57,28 @@ def test_admin_topup_success(admin_db):
     )
     with factory() as session:
         assert session.get(Member, member_id).balance == 5_000
-        assert row.source == "ADMIN"
+        assert row.source == "WEBUI"
         assert session.scalar(select(TopUpRequest)).status == "COMPLETED"
         assert (
             session.scalar(select(Transaction).where(Transaction.type == "TOPUP")).source == "ADMIN"
+        )
+
+
+def test_admin_topup_uses_webui_topup_source(admin_db):
+    _engine, factory, member_id = admin_db
+    row = create_service(factory).create_topup(
+        member_id,
+        5_000,
+        request_uuid="admin-topup-source",
+        note=None,
+        performed_by_admin_id=1,
+        ip=None,
+    )
+    with factory() as session:
+        assert session.get(TopUpRequest, row.id).source == "WEBUI"
+        assert (
+            session.scalar(select(Transaction).where(Transaction.type == "TOPUP")).source
+            == "ADMIN"
         )
 
 

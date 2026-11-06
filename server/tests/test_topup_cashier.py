@@ -20,7 +20,6 @@ from app.models import (
 from app.security.device_token import generate_device_token, hash_device_token
 from app.security.operator_pin import hash_operator_pin
 from app.security.pins import hash_pin
-
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker

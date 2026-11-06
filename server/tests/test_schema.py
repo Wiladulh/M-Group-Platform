@@ -204,3 +204,84 @@ def test_transactions_reject_nonpositive_amount(schema_engine) -> None:
                 {"member_id": member_id},
             )
         transaction.rollback()
+
+def upgrade_to(engine, revision: str) -> None:
+    """Upgrade an isolated schema to an exact Alembic revision."""
+    config = Config(str(ALEMBIC_INI))
+    connection = engine.connect()
+    config.attributes["connection"] = connection
+    try:
+        command.upgrade(config, revision)
+    finally:
+        connection.close()
+
+
+def seed_legacy_topup_sources(engine) -> None:
+    """Seed the pre-0004 source values on a schema stopped at revision 0003."""
+    with engine.begin() as connection:
+        member_id = insert_member(connection)
+        transaction_id = connection.execute(
+            text(
+                """
+                INSERT INTO transactions (
+                    txn_uuid, member_id, type, amount, direction,
+                    balance_before, balance_after, status, source,
+                    occurred_at, performed_by_type
+                ) VALUES (
+                    'legacy-cashier-topup', :member_id, 'TOPUP', 5000, 'CREDIT',
+                    10000, 15000, 'COMPLETED', 'CASHIER',
+                    CURRENT_TIMESTAMP, 'OPERATOR'
+                )
+                """
+            ),
+            {"member_id": member_id},
+        ).lastrowid
+        connection.execute(
+            text(
+                """
+                INSERT INTO topup_requests (
+                    request_uuid, member_id, amount, status, source,
+                    processed_by_type, processed_by_id, txn_id
+                ) VALUES (
+                    'legacy-admin-topup', :member_id, 5000, 'COMPLETED', 'ADMIN',
+                    'ADMIN', '1', :txn_id
+                )
+                """
+            ),
+            {"member_id": member_id, "txn_id": transaction_id},
+        )
+
+
+def migrated_legacy_source_db():
+    engine = make_engine()
+    upgrade_to(engine, "0003")
+    seed_legacy_topup_sources(engine)
+    upgrade_to(engine, "0004")
+    return engine
+
+
+def test_migration_0004_reverts_cashier_txn_source():
+    engine = migrated_legacy_source_db()
+    try:
+        with engine.connect() as connection:
+            sources = set(connection.scalars(text("SELECT DISTINCT source FROM transactions")))
+            assert sources == {"ADMIN"}
+            with pytest.raises(IntegrityError):
+                connection.execute(text("UPDATE transactions SET source = 'CASHIER'"))
+                connection.commit()
+    finally:
+        engine.dispose()
+
+
+def test_migration_0004_reverts_admin_topup_source():
+    engine = migrated_legacy_source_db()
+    try:
+        with engine.connect() as connection:
+            sources = set(connection.scalars(text("SELECT DISTINCT source FROM topup_requests")))
+            assert sources == {"WEBUI"}
+            with pytest.raises(IntegrityError):
+                connection.execute(text("UPDATE topup_requests SET source = 'ADMIN'"))
+                connection.commit()
+    finally:
+        engine.dispose()
+

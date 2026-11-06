@@ -1,9 +1,11 @@
 """Minimum viable offline allowance tests for P4."""
 
 import json
+from datetime import UTC, datetime
 
 import pytest
-from app.models import Base, Device, Member, OfflineAllowance, Setting
+from app.models import Base, Card, Device, Member, OfflineAllowance, Setting, Transaction
+from app.security.pins import hash_pin
 from app.services.allowance import AllowanceService
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
@@ -30,6 +32,14 @@ def seed_member(session, balance=30_000):
     )
     session.add(member)
     session.flush()
+    card = Card(
+        member_id=member.id,
+        uid="A1B2C3D4",
+        pin_hash=hash_pin("4610"),
+        status="ACTIVE",
+    )
+    session.add(card)
+    session.flush()
     return member
 
 
@@ -47,6 +57,28 @@ def seed_device(session, number, offline_enabled=True):
     return device
 
 
+def seed_payment(session, member, device):
+    session.add(
+        Transaction(
+            txn_uuid=f"allowance-seed-{device.device_id}",
+            member_id=member.id,
+            card_id=None,
+            device_id=device.id,
+            type="PAYMENT",
+            amount=1_000,
+            direction="DEBIT",
+            balance_before=member.balance + 1_000,
+            balance_after=member.balance,
+            status="COMPLETED",
+            source="ONLINE",
+            occurred_at=datetime.now(UTC),
+            performed_by_type="DEVICE",
+            performed_by_id=device.device_id,
+        )
+    )
+    session.flush()
+
+
 def test_allowance_zero_devices_returns_empty_mapping(allowance_session):
     session = allowance_session
     with session.begin():
@@ -61,6 +93,7 @@ def test_allowance_two_devices_split_balance_by_cap(allowance_session):
         member = seed_member(session, 30_000)
         first = seed_device(session, 1)
         second = seed_device(session, 2)
+        seed_payment(session, member, first)
         session.add(Setting(key="offline_card_cap", value="50000"))
         session.flush()
         member_id = member.id
@@ -75,6 +108,7 @@ def test_allowance_persists_to_offline_allowances(allowance_session):
         member = seed_member(session, 30_000)
         first = seed_device(session, 1)
         second = seed_device(session, 2)
+        seed_payment(session, member, first)
         member_id = member.id
         device_ids = {first.id, second.id}
     service = AllowanceService(session)

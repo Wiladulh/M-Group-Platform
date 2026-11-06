@@ -7,7 +7,8 @@ from contextlib import redirect_stdout
 from io import StringIO
 
 import pytest
-from app.models import AuditLog, Base, Device, Member, OfflineAllowance, Transaction
+from app.models import AuditLog, Base, Card, Device, Member, OfflineAllowance, Transaction
+from app.security.pins import hash_pin
 from app.services.ledger import (
     IdempotencyConflict,
     InsufficientBalance,
@@ -336,18 +337,37 @@ def _internal_debit(service, member_id, txn_uuid="internal-debit"):
     )
 
 
-def _add_offline_device(factory, device_id="CSH-OFFLINE"):
+def _add_offline_device(factory, member_id, device_id="CSH-OFFLINE"):
     with factory.begin() as session:
-        session.add(
-            Device(
-                device_id=device_id,
-                name="Offline test device",
-                type="cashier",
-                token_hash=f"hash-{device_id}",
-                status="ACTIVE",
-                slot_count=0,
-                config_json='{"offline_enabled":true}',
-            )
+        device = Device(
+            device_id=device_id,
+            name="Offline test device",
+            type="cashier",
+            token_hash=f"hash-{device_id}",
+            status="ACTIVE",
+            slot_count=0,
+            config_json='{"offline_enabled":true}',
+        )
+        session.add(device)
+        session.flush()
+        card = Card(
+            member_id=member_id,
+            uid="A1B2C3D4",
+            pin_hash=hash_pin("4610"),
+            status="ACTIVE",
+        )
+        session.add(card)
+        session.flush()
+        LedgerService(session)._debit_internal(
+            member_id,
+            1_000,
+            txn_uuid=f"seed-payment-{device_id}",
+            card_id=card.id,
+            device_id=device.id,
+            type="PAYMENT",
+            source="ONLINE",
+            performed_by_type="DEVICE",
+            performed_by_id=device_id,
         )
 
 
@@ -365,18 +385,14 @@ def test_debit_internal_requires_active_transaction(db):
 def test_debit_internal_rolls_back_on_exception(db):
     _, factory = db
     member_id = add_member(factory)
-    _add_offline_device(factory)
-    with factory.begin() as session:
-        from app.services.allowance import AllowanceService
-
-        AllowanceService(session).apply_allowances(member_id)
+    _add_offline_device(factory, member_id)
     with factory() as session:
         service = LedgerService(session)
         with pytest.raises(RuntimeError, match="force rollback"), session.begin():
             _internal_debit(service, member_id, "rollback-debit")
             raise RuntimeError("force rollback")
     with factory() as session:
-        assert session.get(Member, member_id).balance == 10_000
+        assert session.get(Member, member_id).balance == 9_000
         assert (
             session.scalar(select(Transaction.id).where(Transaction.txn_uuid == "rollback-debit"))
             is None
@@ -384,7 +400,7 @@ def test_debit_internal_rolls_back_on_exception(db):
         allowance = session.scalar(
             select(OfflineAllowance).where(OfflineAllowance.member_id == member_id)
         )
-        assert allowance.amount == 10_000
+        assert allowance.amount == 9_000
         assert allowance.version == 1
 
 
@@ -445,11 +461,7 @@ def test_compositional_debit_plus_audit_in_one_transaction(db):
 def test_allowance_recomputed_after_compositional_debit(db):
     _, factory = db
     member_id = add_member(factory)
-    _add_offline_device(factory)
-    with factory.begin() as session:
-        from app.services.allowance import AllowanceService
-
-        AllowanceService(session).apply_allowances(member_id)
+    _add_offline_device(factory, member_id)
     with factory() as session:
         service = LedgerService(session)
         with session.begin():
@@ -468,8 +480,8 @@ def test_allowance_recomputed_after_compositional_debit(db):
         allowance = session.scalar(
             select(OfflineAllowance).where(OfflineAllowance.member_id == member_id)
         )
-        assert session.get(Member, member_id).balance == 6_000
-        assert allowance.amount == 6_000
+        assert session.get(Member, member_id).balance == 5_000
+        assert allowance.amount == 5_000
         assert allowance.version == 2
 
 

@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db import SessionLocal
-from app.models import Card, Device, Member, OfflineAllowance, Setting, Transaction
+from app.models import Card, Device, Member, OfflineAllowance, Transaction
 from app.services.events import CacheUpdateEvent
 from app.services.ledger import InsufficientBalance
 from app.services.settings import get_setting

@@ -249,19 +249,18 @@ def test_cache_update_event_not_published_on_rollback(p9_db):
             device = add_device(session, "CSH-A")
             member, _ = add_member(session, 1, 50_000)
             add_payment(session, member, device, "rollback-seed", datetime.now(UTC))
-        with factory() as session:
-            with pytest.raises(RuntimeError):
-                with session.begin():
-                    LedgerService(session)._credit_internal(
-                        member.id,
-                        1_000,
-                        txn_uuid="rolled-back-credit",
-                        type="TOPUP",
-                        source="ADMIN",
-                        performed_by_type="ADMIN",
-                        performed_by_id="1",
-                    )
-                    raise RuntimeError("force rollback after balance mutation")
+        with factory() as session, pytest.raises(RuntimeError):
+            with session.begin():
+                LedgerService(session)._credit_internal(
+                    member.id,
+                    1_000,
+                    txn_uuid="rolled-back-credit",
+                    type="TOPUP",
+                    source="ADMIN",
+                    performed_by_type="ADMIN",
+                    performed_by_id="1",
+                )
+                raise RuntimeError("force rollback after balance mutation")
         assert received == []
     finally:
         unsubscribe()

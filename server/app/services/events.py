@@ -2,7 +2,7 @@
 
 import logging
 from dataclasses import dataclass
-from typing import Callable
+from collections.abc import Callable
 
 from sqlalchemy import event
 from sqlalchemy.orm import Session

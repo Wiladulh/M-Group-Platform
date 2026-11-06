@@ -1,4 +1,5 @@
 """Cashier top-up endpoint."""
+
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 

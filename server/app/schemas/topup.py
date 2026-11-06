@@ -1,4 +1,5 @@
 """Cashier top-up request and response schemas."""
+
 from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, StrictInt

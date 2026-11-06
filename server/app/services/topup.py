@@ -37,15 +37,31 @@ def _iso(value: datetime) -> str:
 
 def _validate_amount(session: Session, amount: int) -> None:
     if isinstance(amount, bool) or not isinstance(amount, int) or amount <= 0:
-        raise DomainError(code="VALIDATION_ERROR", status_code=400, details={"detail": "Nominal harus berupa bilangan Rupiah positif"})
+        raise DomainError(
+            code="VALIDATION_ERROR",
+            status_code=400,
+            details={"detail": "Nominal harus berupa bilangan Rupiah positif"},
+        )
     if amount % 1000:
-        raise DomainError(code="VALIDATION_ERROR", status_code=400, details={"detail": "Nominal harus kelipatan Rp1.000"})
+        raise DomainError(
+            code="VALIDATION_ERROR",
+            status_code=400,
+            details={"detail": "Nominal harus kelipatan Rp1.000"},
+        )
     minimum = int(get_setting(session, "topup_min", 5000))
     maximum = int(get_setting(session, "topup_max", 1_000_000))
     if amount < minimum:
-        raise DomainError(code="VALIDATION_ERROR", status_code=400, details={"detail": f"Minimal top-up Rp{minimum:,}".replace(",", ".")})
+        raise DomainError(
+            code="VALIDATION_ERROR",
+            status_code=400,
+            details={"detail": f"Minimal top-up Rp{minimum:,}".replace(",", ".")},
+        )
     if amount > maximum:
-        raise DomainError(code="VALIDATION_ERROR", status_code=400, details={"detail": f"Maksimal top-up Rp{maximum:,}".replace(",", ".")})
+        raise DomainError(
+            code="VALIDATION_ERROR",
+            status_code=400,
+            details={"detail": f"Maksimal top-up Rp{maximum:,}".replace(",", ".")},
+        )
 
 
 def _load_card_member(session: Session, uid: str) -> tuple[Card, Member]:
@@ -80,7 +96,9 @@ def _verify_member_pin(session: Session, card_id: int, pin: str, pin_hash: str) 
             attempts_left = 3 - card.pin_fail_count
     if locked:
         raise DomainError(code="CARD_LOCKED", status_code=422)
-    raise DomainError(code="INVALID_PIN", status_code=422, details={"attempts_left": attempts_left})
+    raise DomainError(
+        code="INVALID_PIN", status_code=422, details={"attempts_left": attempts_left}
+    )
 
 
 def _operator_failure(session: Session, operator_id: int) -> None:
@@ -97,10 +115,14 @@ def _operator_failure(session: Session, operator_id: int) -> None:
         attempts_left = max(0, 5 - operator.pin_fail_count)
     if locked:
         raise DomainError(code="OPERATOR_LOCKED", status_code=422, details={"attempts_left": 0})
-    raise DomainError(code="OPERATOR_INVALID", status_code=422, details={"attempts_left": attempts_left})
+    raise DomainError(
+        code="OPERATOR_INVALID", status_code=422, details={"attempts_left": attempts_left}
+    )
 
 
-def _same_request(row: TopUpRequest, member_id: int, amount: int, device_id: int, operator_no: int) -> bool:
+def _same_request(
+    row: TopUpRequest, member_id: int, amount: int, device_id: int, operator_no: int
+) -> bool:
     return (
         row.member_id == member_id
         and row.amount == amount
@@ -111,7 +133,9 @@ def _same_request(row: TopUpRequest, member_id: int, amount: int, device_id: int
     )
 
 
-def _response(row: TopUpRequest, txn: Transaction, member: Member, operator: Operator, device_id: str) -> TopupResponse:
+def _response(
+    row: TopUpRequest, txn: Transaction, member: Member, operator: Operator, device_id: str
+) -> TopupResponse:
     return TopupResponse(
         txn_uuid=row.request_uuid,
         member_code=member.member_code,
@@ -139,7 +163,9 @@ def process_cashier_topup(
     if abs(int(now.timestamp()) - payload.ts) > 300:
         raise DomainError(code="CLOCK_SKEW", status_code=400)
     if device_auth.type != "cashier":
-        raise DomainError(code="VALIDATION_ERROR", status_code=400, details={"detail": "Top-up hanya di Cashier"})
+        raise DomainError(
+            code="VALIDATION_ERROR", status_code=400, details={"detail": "Top-up hanya di Cashier"}
+        )
 
     card, member = _load_card_member(session, payload.uid)
     _validate_amount(session, payload.amount)
@@ -153,12 +179,15 @@ def process_cashier_topup(
     operator_id, operator_no = operator.id, operator.operator_no
     if not verify_operator_pin(payload.operator_pin, operator.operator_pin_hash):
         _operator_failure(session, operator_id)
-    if session.scalar(
-        select(OperatorDevice.id).where(
-            OperatorDevice.operator_id == operator_id,
-            OperatorDevice.device_id == device_auth.id,
+    if (
+        session.scalar(
+            select(OperatorDevice.id).where(
+                OperatorDevice.operator_id == operator_id,
+                OperatorDevice.device_id == device_auth.id,
+            )
         )
-    ) is None:
+        is None
+    ):
         session.rollback()
         raise DomainError(
             code="OPERATOR_INVALID",
@@ -169,7 +198,9 @@ def process_cashier_topup(
     _verify_member_pin(session, card_id, payload.pin, card.pin_hash)
     session.rollback()
 
-    existing = session.scalar(select(TopUpRequest).where(TopUpRequest.request_uuid == payload.txn_uuid))
+    existing = session.scalar(
+        select(TopUpRequest).where(TopUpRequest.request_uuid == payload.txn_uuid)
+    )
     if existing is not None:
         if not _same_request(existing, member_id, payload.amount, device_auth.id, operator_no):
             session.rollback()
@@ -218,16 +249,20 @@ def process_cashier_topup(
             )
             session.add(row)
             session.flush()
-            session.add(AuditLog(
-                actor_type="OPERATOR",
-                actor_id=str(operator_no),
-                action="topup.cashier",
-                entity="topup_request",
-                entity_id=str(row.id),
-                before_json=json.dumps({"member_balance": before}, separators=(",", ":")),
-                after_json=json.dumps({"member_balance": txn.balance_after}, separators=(",", ":")),
-                ip=ip,
-            ))
+            session.add(
+                AuditLog(
+                    actor_type="OPERATOR",
+                    actor_id=str(operator_no),
+                    action="topup.cashier",
+                    entity="topup_request",
+                    entity_id=str(row.id),
+                    before_json=json.dumps({"member_balance": before}, separators=(",", ":")),
+                    after_json=json.dumps(
+                        {"member_balance": txn.balance_after}, separators=(",", ":")
+                    ),
+                    ip=ip,
+                )
+            )
             result = _response(row, txn, current_member, current_operator, device_auth.device_id)
         return result
     except IdempotencyConflict as exc:

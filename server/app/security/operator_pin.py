@@ -1,4 +1,5 @@
 """Operator six-digit PIN hashing and validation."""
+
 from argon2 import PasswordHasher, Type
 from argon2.exceptions import InvalidHashError, VerificationError
 

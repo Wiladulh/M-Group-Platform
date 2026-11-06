@@ -132,9 +132,7 @@ class AllowanceService:
             for device, _cap in eligible
         }
         cached_devices = [
-            (device, cap)
-            for device, cap in eligible
-            if member_id in cached_by_device[device.id]
+            (device, cap) for device, cap in eligible if member_id in cached_by_device[device.id]
         ]
         count = len(cached_devices)
         if count == 0:

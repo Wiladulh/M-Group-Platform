@@ -56,7 +56,9 @@ class EventBus:
                     try:
                         handler(domain_event)
                     except Exception:
-                        logger.exception("domain_event_handler_failed event=%s", type(domain_event).__name__)
+                        logger.exception(
+                            "domain_event_handler_failed event=%s", type(domain_event).__name__
+                        )
 
 
 _bus = EventBus()

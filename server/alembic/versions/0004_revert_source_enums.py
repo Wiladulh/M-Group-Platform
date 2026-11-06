@@ -59,6 +59,9 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     # Widen constraints before restoring only rows recorded by upgrade().
+    bind = op.get_bind()
+    if bind.dialect.name == "sqlite":
+        bind.exec_driver_sql("PRAGMA defer_foreign_keys=ON")
     with op.batch_alter_table("transactions") as batch:
         batch.drop_constraint("ck_transactions_source", type_="check")
         batch.create_check_constraint(

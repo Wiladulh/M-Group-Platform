@@ -109,4 +109,5 @@
 - CI final P9 (commit `c2066b970db9317fcd97c8088da4cda5b34d41aa`): Ruff check + format SUCCESS; Pytest 151 passed; total coverage 90,69%. Regression tests P4/P6 were updated to seed the active card and completed-payment history required by the new cache eligibility predicate. `test_allowance_sum_never_exceeds_balance` passed.
 
 ## P7–P9 enum alignment
-- transactions.source must remain ONLINE|OFFLINE_SYNC|ADMIN per Section 5. Cashier topup is distinguished by topup_requests.source=CASHIER, not by transactions.source. Admin/WebUI topup uses topup_requests.source=WEBUI. The ADMIN/CASHIER source additions in migrations 0002/0003 were reverted in 0004.
+- transactions.source must remain ONLINE|OFFLINE_SYNC|ADMIN per Section 5. Cashier topup is distinguished by topup_requests.source=CASHIER, not by transactions.source. Admin/WebUI topup uses topup_requests.source=WEBUI. The ADMIN/CASHIER source additions in migrations 0002/0003 are corrected by migration 0004.
+- Migration 0004 uses no persistent helper table. Downgrade is intentionally lossy: all transactions.source=ADMIN rows become CASHIER and all topup_requests.source=WEBUI rows become ADMIN, including rows that were valid before upgrade. This corrective migration is not expected to be downgraded in production; back up the database before any downgrade.

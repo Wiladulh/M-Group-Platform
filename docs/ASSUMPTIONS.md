@@ -96,3 +96,5 @@
 - `LedgerService._reverse_internal()` adalah primitive komposisional tanpa commit dan wajib dipanggil dalam transaksi aktif; public `reverse()` tetap membuka transaksi sendiri lalu mendelegasikan ke primitive tersebut.
 - AdminTopupService menerima `performed_by_admin_id` dan IP dari caller; service tidak mengelola request/session WebUI, sehingga dapat dipakai kelak oleh handler P14 tanpa coupling HTTP.
 - Reversal top-up hanya dilakukan jika saldo saat ini masih mencukupi seluruh nominal; jika tidak, domain mengembalikan REVERSE_INSUFFICIENT dengan pesan untuk memakai Koreksi Saldo setelah verifikasi.
+
+- CI final P8 (commit `e2509927de86ac37762842675e7b746b55a52dd4`): Ruff check + format SUCCESS; Pytest 142 passed; total coverage 90,36%. P8 menambahkan 10 test case dibanding P7.

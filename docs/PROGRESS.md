@@ -11,6 +11,7 @@
 | P5 | Request-scoped DB session, device bearer auth, GET device config, settings service, seed-minimal CLI, tests dan dokumentasi | DONE | f16d34a3e069bcf01d63f6b675ed9fadb538f31b |
 | P6 | Cashier payment, balance-check, transaction lookup, PIN failure/lockout, idempotency, audit, dan redacted structured logging | DONE | 46018b8e0f372cc13b61814abdd41709fd32bcfc |
 | P7 | Cashier top-up endpoint, operator PIN lockout/binding, ledger credit, idempotency, audit, allowance refresh | DONE | 370d8eedcd495fe3c899b33c1e2b3785e11dd875 |
+| P8 | AdminTopupService create/reverse, atomic internal ledger reversal, admin audit, REVERSE_INSUFFICIENT | DONE | e2509927de86ac37762842675e7b746b55a52dd4 |
 
 ## Catatan
 - P0 hanya membuat dokumentasi; belum ada kode aplikasi, firmware, migrasi, atau konfigurasi runtime.
@@ -72,4 +73,5 @@
 - AdminTopupService menyediakan create_topup dan reverse_topup; tidak ada route atau WebUI pada fase ini.
 - Ledger reversal direfaktor menjadi `_reverse_internal()` agar perubahan saldo, reversal ledger, status topup_requests, allowance, dan audit berada dalam satu transaksi.
 - Migration 0003 menambahkan source ADMIN pada topup_requests.
-- Status: menunggu CI hijau sebelum P9.
+- CI P8: [run 42208569047](https://github.com/Wiladulh/M-Group-Platform/actions/runs/42208569047); Ruff SUCCESS, Pytest SUCCESS (**142 passed**), total coverage **90,36%**.
+- Dibanding P7 (132 tests), P8 menambahkan **10 test case**.

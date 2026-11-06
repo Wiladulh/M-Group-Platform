@@ -10,6 +10,7 @@ from app.config import get_settings
 from app.db import engine
 from app.errors import DomainError
 from app.routers.device import router as device_router
+from app.routers.payments import router as payments_router
 
 settings = get_settings()
 
@@ -43,7 +44,7 @@ async def domain_error_handler(_request: Request, exc: DomainError):
         content={
             "error": {
                 "code": exc.code,
-                "message": exc.message,
+                "message": exc.rendered_message,
                 "details": exc.details,
             }
         },
@@ -53,11 +54,11 @@ async def domain_error_handler(_request: Request, exc: DomainError):
 @app.exception_handler(RequestValidationError)
 async def request_validation_error_handler(_request: Request, exc: RequestValidationError):
     return JSONResponse(
-        status_code=422,
+        status_code=400,
         content={
             "error": {
                 "code": "VALIDATION_ERROR",
-                "message": "Request validation failed",
+                "message": "Permintaan tidak valid",
                 "details": {"errors": exc.errors()},
             }
         },
@@ -93,3 +94,4 @@ def healthz() -> dict[str, str]:
 
 
 app.include_router(device_router)
+app.include_router(payments_router)

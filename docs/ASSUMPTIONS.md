@@ -66,3 +66,16 @@
 - Successful authentication schedules `_update_presence()`, which opens, commits/rolls back, and closes its own `SessionLocal`; failed authentication never schedules a presence update.
 - SQLAlchemy autobegin starts a transaction on the first SELECT. Isolating the auth SELECT prevents that implicit transaction from occupying the handler session and allows the handler to open its own explicit transaction without `InvalidRequestError`.
 - Regression coverage verifies the dataclass fields, clean handler `session.begin()`, no checked-out connection after a TestClient response, successful/failed presence behavior, and the presence task's independent session.
+
+## P6 — Cashier payments dan balance-check
+
+- Timestamp menggunakan Unix epoch seconds dan toleransi ±300 detik; di luar rentang menghasilkan HTTP 400 `CLOCK_SKEW`. Pesan Indonesia untuk celah Section 14.14: **"Jam perangkat tidak sinkron. Hubungi admin."**
+- PIN salah pada `POST /api/v1/balance-check` menambah counter `cards.pin_fail_count` yang sama dengan pembayaran. PIN, kartu, dan risiko penyalahgunaan sama sehingga percobaan tidak dapat di-reset dengan berpindah endpoint.
+- Counter PIN gagal disimpan dan di-commit dalam transaksi independen agar bertahan ketika request bisnis gagal. Percobaan ketiga mengubah kartu menjadi LOCKED dan menghasilkan `CARD_LOCKED`; PIN benar mereset counter dalam transaksi utama.
+- SELECT card/member dan idempotency dilakukan sebelum transaksi penulisan. Session di-rollback untuk menutup SQLAlchemy autobegin sebelum `session.begin()`, sesuai session transaction-neutral P5.
+- Idempotency membandingkan member, card, device, PAYMENT/DEBIT, ONLINE, amount, dan actor. Waktu server tidak dibandingkan karena retry identik terjadi pada waktu berbeda; response menggemakan row asli.
+- Balance-check tidak menulis ledger; audit `balance_check` disimpan dalam transaksi independen dengan actor DEVICE, device id, member id, IP, serta before/after null.
+- GET transaction menyamarkan transaksi hilang dan transaksi lintas device sebagai HTTP 404 dengan pesan sama.
+- HTTP status P6: 200 sukses dan duplicate identik; 400 CLOCK_SKEW/VALIDATION_ERROR; 401 device auth; 404 transaksi hilang/lintas device; 409 duplicate UUID payload berbeda; 422 saldo tidak cukup, PIN salah, kartu terkunci/tidak aktif/tidak dikenal, atau member suspended.
+- Logging memakai JSON formatter dan filter tanpa dependency eksternal. Filter menyamarkan PIN, Authorization/Bearer, nilai X-Device-Id, UID (hanya empat karakter terakhir), dan NIK. Secret tidak boleh dimasukkan ke pesan log.
+- Adaptasi struktur: Card berada di `app.models.member` tanpa ORM relationship `member`; service mengambil Member melalui `card.member_id`. DomainError P5 tetap kompatibel dengan positional message lama sambil menambahkan code, status_code, message_format, details, dan rendered_message.

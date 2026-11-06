@@ -79,8 +79,8 @@ def test_require_device_returns_auth_info(tmp_path, monkeypatch):
     token = generate_device_token()
     add_device(factory, token, config_json='{"mode":"scanner"}')
 
-    def auth_info_endpoint(  # noqa: B008
-        device: DeviceAuthInfo = Depends(require_device),
+    def auth_info_endpoint(
+        device: DeviceAuthInfo = Depends(require_device),  # noqa: B008
     ):
         return {
             "class": type(device).__name__,

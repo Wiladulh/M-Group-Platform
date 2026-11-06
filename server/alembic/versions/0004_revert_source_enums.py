@@ -14,7 +14,7 @@ depends_on = None
 
 
 def _remap(table: str, old_source: str, new_source: str) -> None:
-    op.execute(
+    op.get_bind().execute(
         sa.text(f"UPDATE {table} SET source = :new WHERE source = :old"),
         {"new": new_source, "old": old_source},
     )

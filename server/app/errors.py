@@ -1,8 +1,5 @@
 """Central domain errors and stable Indonesian API messages."""
 
-from typing import Any
-
-
 ERROR_MESSAGES = {
     "INSUFFICIENT_BALANCE": "Saldo tidak cukup",
     "INVALID_PIN": "PIN salah. Sisa percobaan: {attempts_left}",
@@ -25,7 +22,7 @@ class DomainError(Exception):
     def __init__(
         self,
         message: str | None = None,
-        details: dict[str, Any] | None = None,
+        details: dict[str, object] | None = None,
         *,
         code: str | None = None,
         status_code: int | None = None,

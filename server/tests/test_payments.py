@@ -150,6 +150,20 @@ def test_payment_success_online(cashier):
     assert "OK: 1 members verified" in output.getvalue()
 
 
+
+def test_verify_ledger_after_three_successful_payments(cashier):
+    for index in range(3):
+        response = post_payment(
+            cashier,
+            txn_uuid=f"three-payments-{index}",
+            amount=1_000,
+        )
+        assert response.status_code == 200
+    output = StringIO()
+    with redirect_stdout(output):
+        assert cli.verify_ledger() == 0
+    assert output.getvalue().strip() == "OK: 1 members verified"
+
 def test_payment_pin_wrong_attempts_left(cashier):
     response = post_payment(cashier, pin="9999")
     assert response.status_code == 422

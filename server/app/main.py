@@ -8,8 +8,8 @@ from fastapi.responses import JSONResponse
 
 from app.config import get_settings
 from app.db import engine
-from app.logging import configure_logging
 from app.errors import DomainError
+from app.logging import configure_logging
 from app.routers.device import router as device_router
 from app.routers.payments import router as payments_router
 

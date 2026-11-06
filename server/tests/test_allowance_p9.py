@@ -153,7 +153,9 @@ def test_allowance_soft_mode_default(p9_db):
         session.get(Member, member.id).balance = 30_000
         AllowanceService(session).apply_allowances(member.id)
     with factory() as session:
-        rows = session.scalars(select(OfflineAllowance).where(OfflineAllowance.member_id == member.id)).all()
+        rows = session.scalars(
+            select(OfflineAllowance).where(OfflineAllowance.member_id == member.id)
+        ).all()
         assert {row.device_id: row.amount for row in rows} == {a.id: 15_000, b.id: 15_000}
 
 

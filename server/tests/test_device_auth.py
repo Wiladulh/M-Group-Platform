@@ -79,7 +79,9 @@ def test_require_device_returns_auth_info(tmp_path, monkeypatch):
     token = generate_device_token()
     add_device(factory, token, config_json='{"mode":"scanner"}')
 
-    def auth_info_endpoint(device: DeviceAuthInfo = Depends(require_device)):
+    def auth_info_endpoint(  # noqa: B008
+        device: DeviceAuthInfo = Depends(require_device),
+    ):
         return {
             "class": type(device).__name__,
             "id": device.id,
@@ -121,8 +123,8 @@ def test_auth_session_does_not_leak_into_handler(tmp_path, monkeypatch):
     add_device(factory, token)
 
     def transaction_endpoint(
-        _device: DeviceAuthInfo = Depends(require_device),
-        session: Session = Depends(db.get_session),
+        _device: DeviceAuthInfo = Depends(require_device),  # noqa: B008
+        session: Session = Depends(db.get_session),  # noqa: B008
     ):
         with session.begin():
             result = session.execute(text("SELECT 1")).scalar_one()

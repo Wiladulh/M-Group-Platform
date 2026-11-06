@@ -91,3 +91,4 @@
 - Cashier top-up continues to store topup_requests.source=CASHIER while its ledger credit uses transactions.source=ADMIN. Admin top-up stores topup_requests.source=WEBUI and ledger source ADMIN.
 - Updated ORM CHECK constraints, source assertions, DB schema documentation, and assumptions. No service workflow logic changed.
 - Regression coverage adds two migration tests and one each for Cashier/Admin source semantics.
+- Final 0004 verification (F4): `463919f3efb54a4e435591b86ef0b024f31978ec`; migration chain `0001 → 0002 → 0003 → 0004`; CI [run 42255896510](https://github.com/Wiladulh/M-Group-Platform/actions/runs/42255896510) — Ruff SUCCESS, Pytest SUCCESS (**155 passed**), total coverage **90.69%**. DISTINCT source regression assertions confirmed: `transactions` = `{ONLINE, OFFLINE_SYNC, ADMIN}` and `topup_requests` = `{WEBUI, CASHIER}`. Temporary `.github/workflows/format.yml` removed; no tag created in this patch batch.

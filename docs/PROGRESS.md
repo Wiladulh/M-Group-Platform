@@ -44,5 +44,6 @@
 - P4 ledger: `_debit_internal()` dan `_credit_internal()` mewajibkan transaksi aktif dan tidak melakukan commit/rollback; public methods mempertahankan transaksi mandiri.
 - P5 auth: autentikasi memakai session SELECT terisolasi dan mengembalikan `DeviceAuthInfo`; handler session tidak auto-commit; presence task memakai session mandiri.
 - Regression tests P5 mencakup info dataclass, transaksi handler `session.begin()`, lifecycle pool, presence sukses/gagal, dan session independen untuk task.
-- Commit PATCH 4 (auth/session/handler/tests/docs) tercatat di riwayat `main`; CI final harus hijau sebelum P5 patch batch dinyatakan selesai.
-- P6 belum dimulai; tidak ada Git tag.
+- Commit PATCH 4 (auth/session/handler/tests/docs) tercatat di riwayat `main`.
+- CI P5 patch batch: [run 42157790994](https://github.com/Wiladulh/M-Group-Platform/actions/runs/42157790994); Ruff SUCCESS, Pytest SUCCESS (**94 passed**, 1 warning), total coverage **89,06%** (905 statements, 99 missed).
+- Regression test handler membuktikan `with session.begin(): session.execute(text("SELECT 1"))` berhasil tanpa `InvalidRequestError`. P6 belum dimulai; tidak ada Git tag.

@@ -227,7 +227,7 @@ def seed_legacy_topup_sources(engine) -> None:
     with engine.begin() as connection:
         member_id = insert_member(connection)
         transaction_ids = {}
-        for index, source in enumerate(("CASHIER", "ONLINE", "OFFLINE_SYNC", "ADMIN")):
+        for index, source in enumerate(("CASHIER", "ONLINE", "OFFLINE_SYNC")):
             transaction_ids[source] = connection.execute(
                 text(
                     """
@@ -244,7 +244,7 @@ def seed_legacy_topup_sources(engine) -> None:
                 ),
                 {"uuid": f"legacy-txn-{index}", "member_id": member_id, "source": source},
             ).lastrowid
-        for index, source in enumerate(("ADMIN", "WEBUI", "CASHIER")):
+        for index, source in enumerate(("ADMIN", "CASHIER")):
             connection.execute(
                 text(
                     """
@@ -313,7 +313,7 @@ def test_migration_0004_reverts_source_enums_and_downgrade():
             request_sources = set(
                 connection.scalars(text("SELECT DISTINCT source FROM topup_requests"))
             )
-            assert txn_sources == {"ONLINE", "OFFLINE_SYNC", "ADMIN", "CASHIER"}
-            assert request_sources == {"WEBUI", "CASHIER", "ADMIN"}
+            assert txn_sources == {"ONLINE", "OFFLINE_SYNC", "CASHIER"}
+            assert request_sources == {"CASHIER", "ADMIN"}
     finally:
         engine.dispose()

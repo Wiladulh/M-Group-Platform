@@ -292,12 +292,13 @@ def test_migration_0004_reverts_cashier_txn_source():
     engine = migrated_legacy_source_db()
     try:
         with engine.connect() as connection:
-            assert connection.scalar(
+            temp_table_count = connection.scalar(
                 text(
                     "SELECT COUNT(*) FROM sqlite_master "
                     "WHERE type='table' AND name='_0004_source_revert_map'"
                 )
-            ) == 0
+            )
+            assert temp_table_count == 0
             sources = set(
                 connection.scalars(text("SELECT DISTINCT source FROM transactions"))
             )

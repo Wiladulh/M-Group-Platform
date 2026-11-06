@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.errors import DomainError
 from app.models import AdminUser, AuditLog, Member, TopUpRequest, Transaction
+from app.services.allowance import assert_can_spend_online
 from app.services.ledger import InsufficientBalance, LedgerError, LedgerService
 from app.services.topup import _validate_amount
 
@@ -155,6 +156,7 @@ class AdminTopupService:
                         code="REVERSE_INSUFFICIENT",
                         status_code=422,
                     )
+                assert_can_spend_online(self.session, row.member_id, row.amount)
                 before = {"status": row.status, "reason": None}
                 reversal = self.ledger._reverse_internal(
                     original.id,

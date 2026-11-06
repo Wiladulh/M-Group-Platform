@@ -16,6 +16,7 @@ from app.schemas.payment import (
 )
 from app.security.device_auth import DeviceAuthInfo
 from app.security.pins import verify_pin
+from app.services.allowance import assert_can_spend_online
 from app.services.ledger import IdempotencyConflict, InsufficientBalance, LedgerService
 
 logger = logging.getLogger(__name__)
@@ -141,6 +142,7 @@ class PaymentService:
                 if current_card is None or current_member is None:
                     raise DomainError(code="CARD_UNKNOWN", status_code=422)
                 current_card.pin_fail_count = 0
+                assert_can_spend_online(session, member_id, payload.amount)
                 txn = self.ledger._debit_internal(
                     member_id=member_id,
                     amount=payload.amount,

@@ -75,3 +75,11 @@
 - Migration 0003 menambahkan source ADMIN pada topup_requests.
 - CI P8: [run 42208569047](https://github.com/Wiladulh/M-Group-Platform/actions/runs/42208569047); Ruff SUCCESS, Pytest SUCCESS (**142 passed**), total coverage **90,36%**.
 - Dibanding P7 (132 tests), P8 menambahkan **10 test case**.
+
+
+## P9 — Allowance recompute and cache.update event hook
+- Replaced naive offline-device counting with the spec's per-device top-100 member cache ordering and global fill.
+- Added soft/hard hold-mode policy, online payment reservation enforcement, and commit-aware CacheUpdateEvent publication.
+- Added EventBus and SQLAlchemy after_commit/after_rollback session hooks; no WebSocket subscriber or WebUI was added.
+- Added tests for ordering, fill, soft/hard math, sum invariant, payment enforcement, and event commit/rollback semantics.
+- Status: menunggu CI hijau.

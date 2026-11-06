@@ -98,3 +98,10 @@
 - Reversal top-up hanya dilakukan jika saldo saat ini masih mencukupi seluruh nominal; jika tidak, domain mengembalikan REVERSE_INSUFFICIENT dengan pesan untuk memakai Koreksi Saldo setelah verifikasi.
 
 - CI final P8 (commit `e2509927de86ac37762842675e7b746b55a52dd4`): Ruff check + format SUCCESS; Pytest 142 passed; total coverage 90,36%. P8 menambahkan 10 test case dibanding P7.
+
+
+## P9 — Allowance cache and event hook
+- Per-device cache membership is computed from completed PAYMENT rows: top 100 by count on that device in the last 60 days, ties by most recent payment, then global recent-payment fill. Eligibility requires ACTIVE member and ACTIVE card.
+- N is the number of active offline-capable device caches that include the member. Each included device gets `min(offline_card_cap, floor(balance/N))`; this keeps the allowance sum bounded by the balance.
+- `offline_hold_mode=soft` preserves full online spendability. `hard` reserves `sum(offline_allowances.amount)`; PaymentService and AdminTopupService.reverse_topup enforce the resulting spendable balance before debiting.
+- CacheUpdateEvent is queued in `session.info["mgt_pending_events"]`; SQLAlchemy `Session.after_commit` publishes it through the in-process EventBus. `Session.after_rollback` clears the queue to prevent stale events if a session is reused. P10 may add a WS subscriber; none is included in P9.

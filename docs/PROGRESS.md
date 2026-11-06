@@ -34,12 +34,15 @@
 - Ledger service, allowance MVP, CLI verify-ledger, dan concurrency tests selesai pada commit `e9205b8bfd909a3045751373794f9045ba2daa96`.
 - CI P4: [run 41959352025](https://github.com/Wiladulh/M-Group-Platform/actions/runs/41959352025); Ruff SUCCESS, Pytest SUCCESS, 71 passed.
 
-## Catatan P5 — DONE
-- Implementasi dikerjakan dan dipush ke `main`; branch kerja `p5-device-auth` juga tersedia.
-- Commit implementasi final P5: `f16d34a3e069bcf01d63f6b675ed9fadb538f31b`.
-- Logical commits fitur: `cedbb0098a402b249a38d8c94ac10ee5e4df0ad1` (session/auth/config), `5156b3b889c820037e7b1156be546efa40057e29` (seed CLI), `111c62f75acff8c972e0e54c3d58d827da2e2a5f` (tests/docs); commits berikutnya memperbaiki lint dan formatting.
-- Tidak ada migration baru karena tabel dan kolom yang diperlukan telah tersedia dari schema P2.
-- CI final: [GitHub Actions run 42026075969](https://github.com/Wiladulh/M-Group-Platform/actions/runs/42026075969).
-- Job `Ruff`: SUCCESS (ruff check dan ruff format --check).
-- Job `Pytest`: SUCCESS, **82 passed**, 1 warning; security coverage 96.30%.
-- Seed P5 membuat satu Admin (Argon2id, must_change_password=true) dan tiga perangkat development. Device Key dicetak satu kali hanya untuk perangkat baru; DB hanya menyimpan SHA-256 hash. Plaintext keys tidak disimpan pada dokumentasi/commit.
+## Catatan P5 — implementasi awal
+- Implementasi P5 awal dan seed CLI tercatat pada commit `f16d34a3e069bcf01d63f6b675ed9fadb538f31b`.
+- CI awal P5: [run 42026075969](https://github.com/Wiladulh/M-Group-Platform/actions/runs/42026075969); Ruff SUCCESS, Pytest SUCCESS (82 passed).
+
+## Pre-P6 patch batch — P3, coverage, P4, P5
+- P3 DATA_KEY: validator dan Fernet loader menolak key 32-byte seluruhnya nol; empat regression tests ditambahkan.
+- Coverage: cakupan pytest menjadi seluruh package `app`, threshold 70%; hasil setelah P4 **89,44%** (881 statements, 93 missed), 90 tests passed, tanpa modul di bawah 70%.
+- P4 ledger: `_debit_internal()` dan `_credit_internal()` mewajibkan transaksi aktif dan tidak melakukan commit/rollback; public methods mempertahankan transaksi mandiri.
+- P5 auth: autentikasi memakai session SELECT terisolasi dan mengembalikan `DeviceAuthInfo`; handler session tidak auto-commit; presence task memakai session mandiri.
+- Regression tests P5 mencakup info dataclass, transaksi handler `session.begin()`, lifecycle pool, presence sukses/gagal, dan session independen untuk task.
+- Commit PATCH 4 (auth/session/handler/tests/docs) tercatat di riwayat `main`; CI final harus hijau sebelum P5 patch batch dinyatakan selesai.
+- P6 belum dimulai; tidak ada Git tag.

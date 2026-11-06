@@ -24,8 +24,7 @@ class SecretRedactionFilter(logging.Filter):
             if replacement is None:
                 message = pattern.sub(
                     lambda match: (
-                        f"{match.group(1)}"
-                        f"{'*' * (len(match.group(2)) - 4)}{match.group(2)[-4:]}"
+                        f"{match.group(1)}{'*' * (len(match.group(2)) - 4)}{match.group(2)[-4:]}"
                     ),
                     message,
                 )

@@ -138,12 +138,14 @@ def test_payment_success_online(cashier):
     assert (data["balance_before"], data["balance_after"]) == (20_000, 15_000)
     assert data["status"] == "COMPLETED"
     with cashier["factory"]() as session:
-        assert session.scalar(
-            select(Transaction.id).where(Transaction.txn_uuid == "pay-0001")
-        ) is not None
-        assert session.scalar(
-            select(Member.balance).where(Member.id == cashier["member_id"])
-        ) == 15_000
+        assert (
+            session.scalar(select(Transaction.id).where(Transaction.txn_uuid == "pay-0001"))
+            is not None
+        )
+        assert (
+            session.scalar(select(Member.balance).where(Member.id == cashier["member_id"]))
+            == 15_000
+        )
     output = StringIO()
     with redirect_stdout(output):
         assert cli.verify_ledger() == 0
@@ -330,7 +332,29 @@ def test_logs_do_not_contain_secrets(cashier, caplog):
     assert response.status_code == 200
     assert "4610" not in caplog.text
     assert token not in caplog.text
+    assert "payment_completed" in caplog.text
 
+
+
+def test_log_redaction_filter_masks_all_sensitive_fields():
+    import logging
+
+    from app.logging import SecretRedactionFilter
+
+    record = logging.LogRecord(
+        "test",
+        logging.INFO,
+        __file__,
+        1,
+        "pin=4610 Authorization=Bearer abc123 X-Device-Id=secret-token uid=A1B2C3D4 nik=1234567890123456",
+        (),
+        None,
+    )
+    assert SecretRedactionFilter().filter(record)
+    rendered = record.getMessage()
+    for secret in ("4610", "abc123", "secret-token", "A1B2C3D4", "1234567890123456"):
+        assert secret not in rendered
+    assert "C3D4" in rendered
 
 def test_device_config_route_remains_available(cashier):
     response = cashier["client"].get("/api/v1/device/config", headers=headers(cashier))

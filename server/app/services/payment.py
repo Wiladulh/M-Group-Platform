@@ -1,5 +1,6 @@
 """Online cashier payment and balance-check application services."""
 
+import logging
 from datetime import UTC, datetime
 
 from sqlalchemy import select
@@ -16,6 +17,8 @@ from app.schemas.payment import (
 from app.security.device_auth import DeviceAuthInfo
 from app.security.pins import verify_pin
 from app.services.ledger import IdempotencyConflict, InsufficientBalance, LedgerService
+
+logger = logging.getLogger(__name__)
 
 
 def _utc_now() -> datetime:
@@ -151,6 +154,7 @@ class PaymentService:
                     occurred_at=now,
                 )
                 response = _payment_response(txn, current_member)
+            logger.info("payment_completed uid=%s txn_uuid=%s device_id=%s", payload.uid, payload.txn_uuid, device_auth.device_id)
             return response
         except InsufficientBalance as exc:
             raise DomainError(code="INSUFFICIENT_BALANCE", status_code=422) from exc

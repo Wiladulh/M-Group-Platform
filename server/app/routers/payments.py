@@ -39,9 +39,7 @@ def balance_check(
 ) -> BalanceCheckResponse:
     """Verify a card PIN and return the current balance without a ledger debit."""
     ip = request.client.host if request.client else None
-    return PaymentService(session).process_balance_check(
-        session, device_auth, payload, ip=ip
-    )
+    return PaymentService(session).process_balance_check(session, device_auth, payload, ip=ip)
 
 
 @router.get("/transactions/{txn_uuid}", response_model=TransactionStatusResponse)

@@ -12,6 +12,7 @@
 | P6 | Cashier payment, balance-check, transaction lookup, PIN failure/lockout, idempotency, audit, dan redacted structured logging | DONE | 46018b8e0f372cc13b61814abdd41709fd32bcfc |
 | P7 | Cashier top-up endpoint, operator PIN lockout/binding, ledger credit, idempotency, audit, allowance refresh | DONE | 370d8eedcd495fe3c899b33c1e2b3785e11dd875 |
 | P8 | AdminTopupService create/reverse, atomic internal ledger reversal, admin audit, REVERSE_INSUFFICIENT | DONE | e2509927de86ac37762842675e7b746b55a52dd4 |
+| P9 | Cache top-100 ordering, allowance recompute, hard hold mode, commit-aware CacheUpdateEvent | DONE | c2066b970db9317fcd97c8088da4cda5b34d41aa |
 
 ## Catatan
 - P0 hanya membuat dokumentasi; belum ada kode aplikasi, firmware, migrasi, atau konfigurasi runtime.
@@ -82,4 +83,5 @@
 - Added soft/hard hold-mode policy, online payment reservation enforcement, and commit-aware CacheUpdateEvent publication.
 - Added EventBus and SQLAlchemy after_commit/after_rollback session hooks; no WebSocket subscriber or WebUI was added.
 - Added tests for ordering, fill, soft/hard math, sum invariant, payment enforcement, and event commit/rollback semantics.
-- Status: menunggu CI hijau.
+- CI P9: [run 42210325721](https://github.com/Wiladulh/M-Group-Platform/actions/runs/42210325721); Ruff SUCCESS, Pytest SUCCESS (**151 passed**), total coverage **90,69%**.
+- Dibanding P8 (142 tests), P9 menambahkan **9 test case**. Invariant Σ allowance ≤ balance lulus untuk seluruh member seed.

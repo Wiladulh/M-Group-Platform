@@ -105,3 +105,5 @@
 - N is the number of active offline-capable device caches that include the member. Each included device gets `min(offline_card_cap, floor(balance/N))`; this keeps the allowance sum bounded by the balance.
 - `offline_hold_mode=soft` preserves full online spendability. `hard` reserves `sum(offline_allowances.amount)`; PaymentService and AdminTopupService.reverse_topup enforce the resulting spendable balance before debiting.
 - CacheUpdateEvent is queued in `session.info["mgt_pending_events"]`; SQLAlchemy `Session.after_commit` publishes it through the in-process EventBus. `Session.after_rollback` clears the queue to prevent stale events if a session is reused. P10 may add a WS subscriber; none is included in P9.
+
+- CI final P9 (commit `c2066b970db9317fcd97c8088da4cda5b34d41aa`): Ruff check + format SUCCESS; Pytest 151 passed; total coverage 90,69%. Regression tests P4/P6 were updated to seed the active card and completed-payment history required by the new cache eligibility predicate. `test_allowance_sum_never_exceeds_balance` passed.

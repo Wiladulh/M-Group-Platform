@@ -119,7 +119,11 @@ class AdminTopupService:
             with self.session.begin():
                 admin = self.session.get(AdminUser, performed_by_admin_id)
                 if admin is None:
-                    raise DomainError(code="VALIDATION_ERROR", status_code=422, details={"detail": "Admin tidak ditemukan"})
+                    raise DomainError(
+                        code="VALIDATION_ERROR",
+                        status_code=422,
+                        details={"detail": "Admin tidak ditemukan"},
+                    )
                 row = self.session.get(TopUpRequest, topup_request_id)
                 if row is None or row.status != "COMPLETED":
                     raise DomainError(
@@ -134,9 +138,12 @@ class AdminTopupService:
                         status_code=422,
                         details={"detail": "Transaksi top-up tidak valid"},
                     )
-                if self.session.scalar(
-                    select(Transaction.id).where(Transaction.ref_txn_id == original.id)
-                ) is not None:
+                if (
+                    self.session.scalar(
+                        select(Transaction.id).where(Transaction.ref_txn_id == original.id)
+                    )
+                    is not None
+                ):
                     raise DomainError(
                         code="VALIDATION_ERROR",
                         status_code=422,

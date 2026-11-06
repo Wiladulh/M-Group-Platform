@@ -30,10 +30,19 @@ def run_migrations_offline() -> None:
 
 
 def _run_with_connection(connection) -> None:
-    """Run migrations on a caller-provided SQLAlchemy connection."""
+    """Run migrations with SQLite FK enforcement suspended during table rebuilds."""
     context.configure(connection=connection, target_metadata=target_metadata, compare_type=True)
-    with context.begin_transaction():
-        context.run_migrations()
+    raw_connection = None
+    if connection.dialect.name == "sqlite":
+        raw_connection = connection.connection.driver_connection
+        # PRAGMA foreign_keys cannot be changed inside an active transaction.
+        raw_connection.execute("PRAGMA foreign_keys=OFF")
+    try:
+        with context.begin_transaction():
+            context.run_migrations()
+    finally:
+        if raw_connection is not None:
+            raw_connection.execute("PRAGMA foreign_keys=ON")
 
 
 def run_migrations_online() -> None:

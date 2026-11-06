@@ -140,12 +140,22 @@ def test_topup_success(topup_env):
         assert session.scalar(select(TopUpRequest)).source == "CASHIER"
         assert (
             session.scalar(select(Transaction).where(Transaction.type == "TOPUP")).source
-            == "CASHIER"
+            == "ADMIN"
         )
         assert (
             session.scalar(select(AuditLog).where(AuditLog.action == "topup.cashier")) is not None
         )
         assert sum(r.amount for r in session.scalars(select(OfflineAllowance)).all()) <= 15_000
+
+
+def test_topup_cashier_uses_admin_ledger_source(topup_env):
+    assert post(topup_env).status_code == 200
+    with topup_env["factory"]() as session:
+        assert (
+            session.scalar(select(Transaction).where(Transaction.type == "TOPUP")).source
+            == "ADMIN"
+        )
+        assert session.scalar(select(TopUpRequest)).source == "CASHIER"
 
 
 def test_topup_member_pin_wrong(topup_env):

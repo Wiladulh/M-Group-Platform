@@ -85,3 +85,9 @@
 - Added tests for ordering, fill, soft/hard math, sum invariant, payment enforcement, and event commit/rollback semantics.
 - CI P9: [run 42210325721](https://github.com/Wiladulh/M-Group-Platform/actions/runs/42210325721); Ruff SUCCESS, Pytest SUCCESS (**151 passed**), total coverage **90,69%**.
 - Dibanding P8 (142 tests), P9 menambahkan **9 test case**. Invariant Σ allowance ≤ balance lulus untuk seluruh member seed.
+
+## P7–P9 patch — restore Section 5 source enums
+- Added Alembic revision 0004 after 0003. It remaps legacy Cashier ledger rows to ADMIN and legacy admin top-up request rows to WEBUI, then restores the exact Section 5 CHECK constraints. A migration-local row map preserves downgrade round-trip identity without rewriting genuine ADMIN/WEBUI rows.
+- Cashier top-up continues to store topup_requests.source=CASHIER while its ledger credit uses transactions.source=ADMIN. Admin top-up stores topup_requests.source=WEBUI and ledger source ADMIN.
+- Updated ORM CHECK constraints, source assertions, DB schema documentation, and assumptions. No service workflow logic changed.
+- Regression coverage adds two migration tests and one each for Cashier/Admin source semantics.

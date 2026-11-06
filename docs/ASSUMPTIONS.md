@@ -85,14 +85,14 @@
 - PIN operator menggunakan Argon2id dengan parameter default argon2-cffi yang sama dengan primitive P3; modul terpisah `security/operator_pin.py` disiapkan untuk dipakai P14.
 - Lima kegagalan PIN operator mengunci operator selama 15 menit; counter kegagalan di-commit pada transaksi independen agar tidak hilang ketika transaksi top-up ditolak.
 - Operator harus memiliki relasi `operator_devices` ke Cashier pemanggil. Device Vending ditolak sebelum validasi kartu.
-- Migration 0002 memperluas sumber ledger agar transaksi TOPUP CASHIER dapat disimpan. `topup_requests.source=CASHIER` mengikuti enum tabel saat ini; source ADMIN akan ditambahkan pada fase P8.
+- Migration 0002 sempat memperluas sumber ledger untuk transaksi TOPUP CASHIER; penyimpangan ini dikoreksi oleh migration 0004 agar kembali mengikuti Section 5.
 - Request UUID disimpan pada `topup_requests.request_uuid` dan ledger `transactions.txn_uuid`; kedua tabel memiliki unique constraint masing-masing.
 
 - CI final P7 (commit `370d8eedcd495fe3c899b33c1e2b3785e11dd875`): Ruff check + format SUCCESS; Pytest 132 passed; coverage seluruh package app 90,38% (1.310 statements, 126 missed). Tidak ada WebSocket atau Admin WebUI pada P7.
 
 
 ## P8 — Admin top-up service layer
-- Top-up admin disimpan dengan `topup_requests.source=ADMIN`; migration 0003 mempertahankan nilai lama WEBUI/CASHIER dan menambahkan ADMIN.
+- Top-up admin menggunakan `topup_requests.source=WEBUI` sesuai Section 5; migration 0003 sempat menambahkan ADMIN dan dikoreksi oleh migration 0004.
 - `LedgerService._reverse_internal()` adalah primitive komposisional tanpa commit dan wajib dipanggil dalam transaksi aktif; public `reverse()` tetap membuka transaksi sendiri lalu mendelegasikan ke primitive tersebut.
 - AdminTopupService menerima `performed_by_admin_id` dan IP dari caller; service tidak mengelola request/session WebUI, sehingga dapat dipakai kelak oleh handler P14 tanpa coupling HTTP.
 - Reversal top-up hanya dilakukan jika saldo saat ini masih mencukupi seluruh nominal; jika tidak, domain mengembalikan REVERSE_INSUFFICIENT dengan pesan untuk memakai Koreksi Saldo setelah verifikasi.
@@ -107,3 +107,6 @@
 - CacheUpdateEvent is queued in `session.info["mgt_pending_events"]`; SQLAlchemy `Session.after_commit` publishes it through the in-process EventBus. `Session.after_rollback` clears the queue to prevent stale events if a session is reused. P10 may add a WS subscriber; none is included in P9.
 
 - CI final P9 (commit `c2066b970db9317fcd97c8088da4cda5b34d41aa`): Ruff check + format SUCCESS; Pytest 151 passed; total coverage 90,69%. Regression tests P4/P6 were updated to seed the active card and completed-payment history required by the new cache eligibility predicate. `test_allowance_sum_never_exceeds_balance` passed.
+
+## P7–P9 enum alignment
+- transactions.source must remain ONLINE|OFFLINE_SYNC|ADMIN per Section 5. Cashier topup is distinguished by topup_requests.source=CASHIER, not by transactions.source. Admin/WebUI topup uses topup_requests.source=WEBUI. The ADMIN/CASHIER source additions in migrations 0002/0003 were reverted in 0004.

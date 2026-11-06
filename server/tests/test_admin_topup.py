@@ -60,8 +60,7 @@ def test_admin_topup_success(admin_db):
         assert row.source == "ADMIN"
         assert session.scalar(select(TopUpRequest)).status == "COMPLETED"
         assert (
-            session.scalar(select(Transaction).where(Transaction.type == "TOPUP")).source
-            == "ADMIN"
+            session.scalar(select(Transaction).where(Transaction.type == "TOPUP")).source == "ADMIN"
         )
 
 

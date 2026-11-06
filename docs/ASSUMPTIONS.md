@@ -18,7 +18,6 @@
 - DateTime(timezone=True) digunakan; SQLite tidak memiliki tipe timestamp ber-timezone native, sehingga aplikasi wajib menulis/membaca UTC.
 - Kolom non-null mengikuti spesifikasi; default sederhana seperti status ACTIVE dan counter 0 dipasang bila aman.
 - catalog_meta dan admin_users singleton ditegakkan dengan CHECK(id = 1).
-- Index cards.uid dan members.nik_idx dibuat eksplisit.
 - Migration test memakai SQLite in-memory; WAL tidak didukung in-memory, sedangkan engine aplikasi file-backed mengaktifkan WAL.
 - FK memakai ON DELETE RESTRICT untuk melindungi histori transaksi/audit.
 
@@ -45,10 +44,7 @@
 - Device Key hanya dicetak untuk device yang baru dibuat; seed kedua kali tidak dapat menampilkan ulang key karena database hanya menyimpan hash.
 - P5 tidak menambah endpoint atau token Admin. P14 wajib memastikan semua route /admin/* hanya menerima session cookie dan menolak header Authorization (Section 16 #17).
 - CLOCK_SKEW disediakan sebagai domain error handler 409; pemeriksaan timestamp request akan diterapkan pada fase transaksi.
-- Session dependency request-scoped melakukan commit setelah request sukses, rollback saat exception, dan selalu close; dependency yang sama dipakai oleh auth dan handler endpoint.
-- Kegagalan auth tidak mengubah last_seen_at/last_ip; presence hanya diperbarui setelah status ACTIVE dan token terverifikasi.
-- CI final P5 pada run 42026075969: Ruff SUCCESS, Pytest SUCCESS (82 passed, 1 warning, security coverage 96.30%).
-
+- Failed authentication does not update last_seen_at/last_ip; successful authentication schedules a presence update only after ACTIVE status and token verification.
 
 ## P3 patch — reject all-zero DATA_KEY
 - Settings.data_key dan _load_fernet_key() sama-sama menolak key Base64 yang mendekode menjadi 32 byte nol; key wajib berisi setidaknya satu byte non-zero.
@@ -56,17 +52,17 @@
 
 ## Coverage patch — measure the complete app package
 - Pytest coverage scope diperluas dari `app/security` menjadi seluruh package `app` (`--cov=app`); threshold tetap 70% dan tidak ada module yang dikecualikan.
-- Baseline sebelum perubahan ini: P5 CI hanya mengukur `app/security` (96.30% pada run 42026075969); angka tersebut bukan baseline coverage seluruh aplikasi.
-- Hasil CI scope seluruh `app`: **89.00%** (873 statements, 96 missed), 86 tests passed. Tidak ada module di bawah 70%; terendah `app/services/settings.py` 73% (37 statements), lalu `app/services/ledger.py` 75% (126), `app/services/allowance.py` 75% (56), dan `app/cli.py` 72% (82).
-
+- Hasil CI scope seluruh `app` setelah P4: **89,44%** (881 statements, 93 missed), 90 tests passed. Tidak ada module di bawah 70%; terendah `app/cli.py` 72%, `app/services/settings.py` 73%, dan `app/services/ledger.py` 75%.
 
 ## P4 patch — composable ledger mutations
 - `_debit_internal()` dan `_credit_internal()` hanya boleh dipanggil di dalam transaksi aktif; keduanya tidak melakukan commit/rollback. Caller bertanggung jawab membungkus seluruh perubahan ledger, allowance, dan co-write (misalnya audit/PIN reset) dalam satu `session.begin()`.
 - Public `debit()` dan `credit()` tetap aman secara default dan tetap membuka satu transaksi sendiri sebelum memanggil method internal.
 - `reverse()` dan metode perubahan status dispense tetap memiliki transaksi sendiri; akan direfaktor saat komposisi dibutuhkan oleh P6 vending atau P8 admin topup.
 
-
-## Patch batch — open questions
-- **P5 handler transaction boundary:** removing `session.flush()` from `require_device()` is not sufficient to leave the handler's request-scoped SQLAlchemy Session transaction-free. The successful authentication still executes `session.scalar(select(Device)...)`; SQLAlchemy autobegins a transaction on that SELECT. Therefore the requested temporary endpoint's `with session.begin():` would still raise `InvalidRequestError` because a transaction is already active.
-- The BackgroundTasks presence writer isolates the heartbeat UPDATE, but it does not isolate the authentication SELECT. Passing the P5 composition test safely requires an additional design choice, such as performing the auth lookup in a separate `SessionLocal()` and returning a detached, already-loaded Device object, or another explicit session-ownership strategy. This changes the specified dependency/session behavior, so implementation stopped here rather than improvising.
-- P5 code has not been modified in this batch. Decide/authorize the auth lookup session boundary before resuming PATCH 4.
+## P5 patch — isolated device-auth session
+- Device authentication performs its SELECT in a dedicated `get_auth_session()`; the dependency always closes that session and never commits it.
+- Authentication returns immutable `DeviceAuthInfo` data (including `name`) rather than an ORM entity; no ORM object crosses a session boundary.
+- The handler's `get_session()` is transaction-neutral: it rolls back on exceptions and always closes, but never auto-commits. A handler explicitly owns its business transaction with `session.begin()`.
+- Successful authentication schedules `_update_presence()`, which opens, commits/rolls back, and closes its own `SessionLocal`; failed authentication never schedules a presence update.
+- SQLAlchemy autobegin starts a transaction on the first SELECT. Isolating the auth SELECT prevents that implicit transaction from occupying the handler session and allows the handler to open its own explicit transaction without `InvalidRequestError`.
+- Regression coverage verifies the dataclass fields, clean handler `session.begin()`, no checked-out connection after a TestClient response, successful/failed presence behavior, and the presence task's independent session.

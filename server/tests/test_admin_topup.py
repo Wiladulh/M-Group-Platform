@@ -76,7 +76,9 @@ def test_admin_topup_uses_webui_topup_source(admin_db):
     )
     with factory() as session:
         assert session.get(TopUpRequest, row.id).source == "WEBUI"
-        assert session.scalar(select(Transaction).where(Transaction.type == "TOPUP")).source == "ADMIN"
+        assert (
+            session.scalar(select(Transaction).where(Transaction.type == "TOPUP")).source == "ADMIN"
+        )
 
 
 def test_admin_topup_idempotent(admin_db):

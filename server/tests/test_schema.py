@@ -261,7 +261,9 @@ def seed_legacy_topup_sources(engine) -> None:
                     "uuid": f"legacy-request-{index}",
                     "member_id": member_id,
                     "source": source,
-                    "txn_id": transaction_ids["CASHIER"] if index == 0 else transaction_ids["ONLINE"],
+                    "txn_id": transaction_ids["CASHIER"]
+                    if index == 0
+                    else transaction_ids["ONLINE"],
                 },
             )
 
@@ -299,15 +301,11 @@ def test_migration_0004_reverts_cashier_txn_source():
                 )
             )
             assert temp_table_count == 0
-            sources = set(
-                connection.scalars(text("SELECT DISTINCT source FROM transactions"))
-            )
+            sources = set(connection.scalars(text("SELECT DISTINCT source FROM transactions")))
             assert sources == {"ONLINE", "OFFLINE_SYNC", "ADMIN"}
         downgrade_to_0003_with_fk_off(engine)
         with engine.connect() as connection:
-            sources = set(
-                connection.scalars(text("SELECT DISTINCT source FROM transactions"))
-            )
+            sources = set(connection.scalars(text("SELECT DISTINCT source FROM transactions")))
             assert sources == {"ONLINE", "OFFLINE_SYNC", "CASHIER"}
     finally:
         engine.dispose()
@@ -317,15 +315,11 @@ def test_migration_0004_reverts_admin_topup_source():
     engine = migrated_legacy_source_db()
     try:
         with engine.connect() as connection:
-            sources = set(
-                connection.scalars(text("SELECT DISTINCT source FROM topup_requests"))
-            )
+            sources = set(connection.scalars(text("SELECT DISTINCT source FROM topup_requests")))
             assert sources == {"WEBUI", "CASHIER"}
         downgrade_to_0003_with_fk_off(engine)
         with engine.connect() as connection:
-            sources = set(
-                connection.scalars(text("SELECT DISTINCT source FROM topup_requests"))
-            )
+            sources = set(connection.scalars(text("SELECT DISTINCT source FROM topup_requests")))
             assert sources == {"ADMIN", "CASHIER"}
     finally:
         engine.dispose()

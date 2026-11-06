@@ -138,7 +138,9 @@ def test_topup_success(topup_env):
     with topup_env["factory"]() as session:
         assert session.scalar(select(Member.balance)) == 15_000
         assert session.scalar(select(TopUpRequest)).source == "CASHIER"
-        assert session.scalar(select(Transaction).where(Transaction.type == "TOPUP")).source == "ADMIN"
+        assert (
+            session.scalar(select(Transaction).where(Transaction.type == "TOPUP")).source == "ADMIN"
+        )
         assert (
             session.scalar(select(AuditLog).where(AuditLog.action == "topup.cashier")) is not None
         )
@@ -149,8 +151,7 @@ def test_topup_cashier_uses_admin_ledger_source(topup_env):
     assert post(topup_env).status_code == 200
     with topup_env["factory"]() as session:
         assert (
-            session.scalar(select(Transaction).where(Transaction.type == "TOPUP")).source
-            == "ADMIN"
+            session.scalar(select(Transaction).where(Transaction.type == "TOPUP")).source == "ADMIN"
         )
         assert session.scalar(select(TopUpRequest)).source == "CASHIER"
 

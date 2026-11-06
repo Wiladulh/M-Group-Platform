@@ -26,6 +26,8 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("table_name", "row_id"),
     )
     bind = op.get_bind()
+    if bind.dialect.name == "sqlite":
+        bind.exec_driver_sql("PRAGMA defer_foreign_keys=ON")
     bind.execute(
         sa.text(
             f"INSERT INTO {_MAP} (table_name, row_id, old_source) "
@@ -73,16 +75,16 @@ def downgrade() -> None:
     bind = op.get_bind()
     bind.execute(
         sa.text(
-            f"UPDATE transactions SET source = 'CASHIER' "
-            "WHERE id IN (SELECT row_id FROM " + _MAP +
-            " WHERE table_name = 'transactions' AND old_source = 'CASHIER')"
+            f"UPDATE transactions SET source = 'CASHIER' WHERE id IN "
+            f"(SELECT row_id FROM {_MAP} WHERE table_name = 'transactions' "
+            "AND old_source = 'CASHIER')"
         )
     )
     bind.execute(
         sa.text(
-            f"UPDATE topup_requests SET source = 'ADMIN' "
-            "WHERE id IN (SELECT row_id FROM " + _MAP +
-            " WHERE table_name = 'topup_requests' AND old_source = 'ADMIN')"
+            f"UPDATE topup_requests SET source = 'ADMIN' WHERE id IN "
+            f"(SELECT row_id FROM {_MAP} WHERE table_name = 'topup_requests' "
+            "AND old_source = 'ADMIN')"
         )
     )
     op.drop_table(_MAP)

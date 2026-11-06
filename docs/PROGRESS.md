@@ -10,6 +10,7 @@
 | P4 | Ledger service, atomic debit/credit, allowance MVP, verify-ledger CLI, dan concurrency tests | DONE | e9205b8bfd909a3045751373794f9045ba2daa96 |
 | P5 | Request-scoped DB session, device bearer auth, GET device config, settings service, seed-minimal CLI, tests dan dokumentasi | DONE | f16d34a3e069bcf01d63f6b675ed9fadb538f31b |
 | P6 | Cashier payment, balance-check, transaction lookup, PIN failure/lockout, idempotency, audit, dan redacted structured logging | DONE | 46018b8e0f372cc13b61814abdd41709fd32bcfc |
+| P7 | Cashier top-up endpoint, operator PIN lockout/binding, ledger credit, idempotency, audit, allowance refresh | DONE | 370d8eedcd495fe3c899b33c1e2b3785e11dd875 |
 
 ## Catatan
 - P0 hanya membuat dokumentasi; belum ada kode aplikasi, firmware, migrasi, atau konfigurasi runtime.
@@ -63,4 +64,5 @@
 ## P7 — Cashier top-up
 - Implementasi endpoint `POST /api/v1/topups`, validasi kartu/member/operator, lockout PIN operator, idempotency, ledger credit atomik, audit log, dan allowance refresh.
 - Migration 0002 memperbolehkan source CASHIER pada ledger.
-- Status: menunggu CI hijau sebelum P8.
+- CI P7: [run 42207631202](https://github.com/Wiladulh/M-Group-Platform/actions/runs/42207631202); Ruff SUCCESS, Pytest SUCCESS (**132 passed**), total coverage **90,38%**.
+- Dibanding baseline P6 (117 tests), P7 menambahkan **15 test case efektif** termasuk parameterisasi amount min/max.

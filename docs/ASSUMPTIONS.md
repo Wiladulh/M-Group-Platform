@@ -87,3 +87,5 @@
 - Operator harus memiliki relasi `operator_devices` ke Cashier pemanggil. Device Vending ditolak sebelum validasi kartu.
 - Migration 0002 memperluas sumber ledger agar transaksi TOPUP CASHIER dapat disimpan. `topup_requests.source=CASHIER` mengikuti enum tabel saat ini; source ADMIN akan ditambahkan pada fase P8.
 - Request UUID disimpan pada `topup_requests.request_uuid` dan ledger `transactions.txn_uuid`; kedua tabel memiliki unique constraint masing-masing.
+
+- CI final P7 (commit `370d8eedcd495fe3c899b33c1e2b3785e11dd875`): Ruff check + format SUCCESS; Pytest 132 passed; coverage seluruh package app 90,38% (1.310 statements, 126 missed). Tidak ada WebSocket atau Admin WebUI pada P7.

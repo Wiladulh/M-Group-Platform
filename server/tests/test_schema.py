@@ -205,6 +205,7 @@ def test_transactions_reject_nonpositive_amount(schema_engine) -> None:
             )
         transaction.rollback()
 
+
 def upgrade_to(engine, revision: str) -> None:
     """Upgrade an isolated schema to an exact Alembic revision."""
     config = Config(str(ALEMBIC_INI))
@@ -264,7 +265,9 @@ def test_migration_0004_reverts_cashier_txn_source():
     engine = migrated_legacy_source_db()
     try:
         with engine.connect() as connection:
-            sources = set(connection.scalars(text("SELECT DISTINCT source FROM transactions")))
+            sources = set(
+                connection.scalars(text("SELECT DISTINCT source FROM transactions"))
+            )
             assert sources == {"ADMIN"}
             with pytest.raises(IntegrityError):
                 connection.execute(text("UPDATE transactions SET source = 'CASHIER'"))
@@ -277,7 +280,9 @@ def test_migration_0004_reverts_admin_topup_source():
     engine = migrated_legacy_source_db()
     try:
         with engine.connect() as connection:
-            sources = set(connection.scalars(text("SELECT DISTINCT source FROM topup_requests")))
+            sources = set(
+                connection.scalars(text("SELECT DISTINCT source FROM topup_requests"))
+            )
             assert sources == {"WEBUI"}
             with pytest.raises(IntegrityError):
                 connection.execute(text("UPDATE topup_requests SET source = 'ADMIN'"))

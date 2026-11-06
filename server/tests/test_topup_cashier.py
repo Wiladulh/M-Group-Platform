@@ -9,7 +9,18 @@ from sqlalchemy.orm import sessionmaker
 
 from app import db
 from app.main import app
-from app.models import AuditLog, Base, Card, Device, Member, OfflineAllowance, Operator, OperatorDevice, TopUpRequest, Transaction
+from app.models import (
+    AuditLog,
+    Base,
+    Card,
+    Device,
+    Member,
+    OfflineAllowance,
+    Operator,
+    OperatorDevice,
+    TopUpRequest,
+    Transaction,
+)
 from app.security.device_token import generate_device_token, hash_device_token
 from app.security.operator_pin import hash_operator_pin
 from app.security.pins import hash_pin

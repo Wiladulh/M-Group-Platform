@@ -6,7 +6,15 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.errors import DomainError
-from app.models import AuditLog, Card, Device, Member, Operator, OperatorDevice, TopUpRequest, Transaction
+from app.models import (
+    AuditLog,
+    Card,
+    Member,
+    Operator,
+    OperatorDevice,
+    TopUpRequest,
+    Transaction,
+)
 from app.schemas.topup import TopupRequestPayload, TopupResponse
 from app.security.device_auth import DeviceAuthInfo
 from app.security.operator_pin import verify_operator_pin
@@ -134,6 +142,7 @@ def process_cashier_topup(
         raise DomainError(code="VALIDATION_ERROR", status_code=400, details={"detail": "Top-up hanya di Cashier"})
 
     card, member = _load_card_member(session, payload.uid)
+    _validate_amount(session, payload.amount)
     card_id, member_id = card.id, member.id
     operator = session.scalar(select(Operator).where(Operator.operator_no == payload.operator_no))
     if operator is None or not operator.is_active:
@@ -158,7 +167,6 @@ def process_cashier_topup(
         )
 
     _verify_member_pin(session, card_id, payload.pin, card.pin_hash)
-    _validate_amount(session, payload.amount)
     session.rollback()
 
     existing = session.scalar(select(TopUpRequest).where(TopUpRequest.request_uuid == payload.txn_uuid))

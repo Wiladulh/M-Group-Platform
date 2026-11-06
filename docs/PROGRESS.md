@@ -58,3 +58,9 @@
 - S2 (penghapusan workflow Tag): `a35ecee193e649ce53fff198d0df5069572a9486`; CI [run 42168663044](https://github.com/Wiladulh/M-Group-Platform/actions/runs/42168663044) — Ruff SUCCESS dan Pytest SUCCESS.
 - Catatan asumsi/keputusan P6 dicatat di `docs/ASSUMPTIONS.md`.
 - Verifikasi manual CLI `verify-ledger` belum diklaim; regression test untuk tiga pembayaran sukses mengharapkan output `OK: 1 members verified`.
+
+
+## P7 — Cashier top-up
+- Implementasi endpoint `POST /api/v1/topups`, validasi kartu/member/operator, lockout PIN operator, idempotency, ledger credit atomik, audit log, dan allowance refresh.
+- Migration 0002 memperbolehkan source CASHIER pada ledger.
+- Status: menunggu CI hijau sebelum P8.

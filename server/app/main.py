@@ -12,6 +12,7 @@ from app.errors import DomainError
 from app.logging import configure_logging
 from app.routers.device import router as device_router
 from app.routers.payments import router as payments_router
+from app.routers.topups import router as topups_router
 
 settings = get_settings()
 configure_logging()
@@ -97,3 +98,4 @@ def healthz() -> dict[str, str]:
 
 app.include_router(device_router)
 app.include_router(payments_router)
+app.include_router(topups_router)

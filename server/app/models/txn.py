@@ -32,7 +32,7 @@ class Transaction(TimestampMixin, Base):
             name="ck_transactions_status",
         ),
         CheckConstraint(
-            "source IN ('ONLINE', 'OFFLINE_SYNC', 'ADMIN')",
+            "source IN ('ONLINE', 'OFFLINE_SYNC', 'ADMIN', 'CASHIER')",
             name="ck_transactions_source",
         ),
         CheckConstraint(

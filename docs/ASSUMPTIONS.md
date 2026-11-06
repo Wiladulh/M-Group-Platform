@@ -79,3 +79,11 @@
 - HTTP status P6: 200 sukses dan duplicate identik; 400 CLOCK_SKEW/VALIDATION_ERROR; 401 device auth; 404 transaksi hilang/lintas device; 409 duplicate UUID payload berbeda; 422 saldo tidak cukup, PIN salah, kartu terkunci/tidak aktif/tidak dikenal, atau member suspended.
 - Logging memakai JSON formatter dan filter tanpa dependency eksternal. Filter menyamarkan PIN, Authorization/Bearer, nilai X-Device-Id, UID (hanya empat karakter terakhir), dan NIK. Secret tidak boleh dimasukkan ke pesan log.
 - Adaptasi struktur: Card berada di `app.models.member` tanpa ORM relationship `member`; service mengambil Member melalui `card.member_id`. DomainError P5 tetap kompatibel dengan positional message lama sambil menambahkan code, status_code, message_format, details, dan rendered_message.
+
+
+## P7 — Cashier top-up
+- PIN operator menggunakan Argon2id dengan parameter default argon2-cffi yang sama dengan primitive P3; modul terpisah `security/operator_pin.py` disiapkan untuk dipakai P14.
+- Lima kegagalan PIN operator mengunci operator selama 15 menit; counter kegagalan di-commit pada transaksi independen agar tidak hilang ketika transaksi top-up ditolak.
+- Operator harus memiliki relasi `operator_devices` ke Cashier pemanggil. Device Vending ditolak sebelum validasi kartu.
+- Migration 0002 memperluas sumber ledger agar transaksi TOPUP CASHIER dapat disimpan. `topup_requests.source=CASHIER` mengikuti enum tabel saat ini; source ADMIN akan ditambahkan pada fase P8.
+- Request UUID disimpan pada `topup_requests.request_uuid` dan ledger `transactions.txn_uuid`; kedua tabel memiliki unique constraint masing-masing.

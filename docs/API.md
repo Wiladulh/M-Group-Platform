@@ -116,3 +116,10 @@ Semua error memakai bentuk
 
 Autentikasi memakai pesan generik `DEVICE_REVOKED`. Endpoint P5
 `GET /api/v1/device/config` tetap tersedia.
+
+
+## POST /api/v1/topups
+
+Cashier-only member top-up. Memerlukan device bearer auth dan header `X-Device-Id`.
+Request berisi `txn_uuid`, UID kartu uppercase HEX, nominal integer Rupiah, nomor dan PIN operator 6 digit, PIN member 4 digit, serta `ts` Unix seconds.
+Nominal harus kelipatan Rp1.000, minimal `topup_min` (default Rp5.000), maksimal `topup_max` (default Rp1.000.000). Operator wajib aktif, tidak terkunci, dan terikat ke Cashier tersebut. UUID identik mengembalikan hasil awal; payload berbeda menghasilkan 409.

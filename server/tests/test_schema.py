@@ -261,7 +261,7 @@ def seed_legacy_topup_sources(engine) -> None:
                     "uuid": f"legacy-request-{index}",
                     "member_id": member_id,
                     "source": source,
-                    "txn_id": transaction_ids["CASHIER"],
+                    "txn_id": transaction_ids["CASHIER"] if index == 0 else transaction_ids["ONLINE"],
                 },
             )
 

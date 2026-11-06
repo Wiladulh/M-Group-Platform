@@ -3,11 +3,13 @@
 from app import db
 from app.main import app
 from app.models import Base, Device, Setting
+from app.security.device_auth import DeviceAuthInfo, _update_presence, require_device
 from app.security.device_token import generate_device_token, hash_device_token
 from app.services.settings import get_all_settings, get_setting, set_setting
+from fastapi import APIRouter, Depends
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, select
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine, select, text
+from sqlalchemy.orm import Session, sessionmaker
 
 
 def make_test_db(path, monkeypatch):
@@ -34,6 +36,19 @@ def add_device(factory, token, *, status="ACTIVE", config_json=None):
         )
 
 
+def _register_test_route(path, endpoint):
+    router = APIRouter()
+    router.add_api_route(path, endpoint, methods=["GET"])
+    app.include_router(router)
+    return path
+
+
+def _remove_test_route(path):
+    app.router.routes[:] = [
+        route for route in app.router.routes if getattr(route, "path", None) != path
+    ]
+
+
 def test_valid_device_token_returns_config_and_updates_last_seen(tmp_path, monkeypatch):
     engine, factory = make_test_db(tmp_path / "auth.db", monkeypatch)
     token = generate_device_token()
@@ -55,6 +70,89 @@ def test_valid_device_token_returns_config_and_updates_last_seen(tmp_path, monke
                 second_seen = session.scalar(select(Device.last_seen_at))
             assert first_seen is not None and second_seen is not None
             assert second_seen >= first_seen
+    finally:
+        engine.dispose()
+
+
+def test_require_device_returns_auth_info(tmp_path, monkeypatch):
+    engine, factory = make_test_db(tmp_path / "auth-info.db", monkeypatch)
+    token = generate_device_token()
+    add_device(factory, token, config_json='{"mode":"scanner"}')
+
+    def auth_info_endpoint(device: DeviceAuthInfo = Depends(require_device)):
+        return {
+            "id": device.id,
+            "device_id": device.device_id,
+            "name": device.name,
+            "type": device.type,
+            "config_json": device.config_json,
+            "slot_count": device.slot_count,
+            "reported_mode": device.reported_mode,
+        }
+
+    path = "/__test/device-auth-info"
+    _register_test_route(path, auth_info_endpoint)
+    try:
+        with TestClient(app) as client:
+            response = client.get(
+                path,
+                headers={"Authorization": f"Bearer {token}", "X-Device-Id": "CSH-001"},
+            )
+        assert response.status_code == 200
+        assert response.json() == {
+            "id": 1,
+            "device_id": "CSH-001",
+            "name": "Cashier Test",
+            "type": "cashier",
+            "config_json": '{"mode":"scanner"}',
+            "slot_count": 0,
+            "reported_mode": "manual",
+        }
+    finally:
+        _remove_test_route(path)
+        engine.dispose()
+
+
+def test_auth_session_does_not_leak_into_handler(tmp_path, monkeypatch):
+    engine, factory = make_test_db(tmp_path / "clean-handler-session.db", monkeypatch)
+    token = generate_device_token()
+    add_device(factory, token)
+
+    def transaction_endpoint(
+        _device: DeviceAuthInfo = Depends(require_device),
+        session: Session = Depends(db.get_session),
+    ):
+        with session.begin():
+            result = session.execute(text("SELECT 1")).scalar_one()
+        return {"result": result}
+
+    path = "/__test/clean-handler-session"
+    _register_test_route(path, transaction_endpoint)
+    try:
+        with TestClient(app) as client:
+            response = client.get(
+                path,
+                headers={"Authorization": f"Bearer {token}", "X-Device-Id": "CSH-001"},
+            )
+        assert response.status_code == 200
+        assert response.json() == {"result": 1}
+    finally:
+        _remove_test_route(path)
+        engine.dispose()
+
+
+def test_auth_session_closed_after_request(tmp_path, monkeypatch):
+    engine, factory = make_test_db(tmp_path / "auth-session-close.db", monkeypatch)
+    token = generate_device_token()
+    add_device(factory, token)
+    try:
+        with TestClient(app) as client:
+            response = client.get(
+                "/api/v1/device/config",
+                headers={"Authorization": f"Bearer {token}", "X-Device-Id": "CSH-001"},
+            )
+        assert response.status_code == 200
+        assert engine.pool.checkedout() == 0
     finally:
         engine.dispose()
 
@@ -168,6 +266,40 @@ def test_failed_auth_does_not_update_last_seen(tmp_path, monkeypatch):
             assert session.scalar(select(Device.last_seen_at)) is None
     finally:
         engine.dispose()
+
+
+def test_presence_task_uses_own_session(monkeypatch):
+    class FakeSession:
+        def __init__(self):
+            self.executed = False
+            self.committed = False
+            self.closed = False
+
+        def execute(self, statement):
+            self.executed = True
+
+        def commit(self):
+            self.committed = True
+
+        def rollback(self):
+            raise AssertionError("rollback must not be called")
+
+        def close(self):
+            self.closed = True
+
+    created = []
+
+    def session_factory():
+        session = FakeSession()
+        created.append(session)
+        return session
+
+    monkeypatch.setattr(db, "SessionLocal", session_factory)
+    _update_presence(1, "127.0.0.1")
+    assert len(created) == 1
+    assert created[0].executed is True
+    assert created[0].committed is True
+    assert created[0].closed is True
 
 
 def test_settings_helpers_cast_upsert_and_list(tmp_path):

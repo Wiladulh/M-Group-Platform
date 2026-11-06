@@ -1,0 +1,24 @@
+name: Tag
+on: workflow_dispatch
+permissions:
+  contents: write
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Create annotated tag on current HEAD
+        run: |
+          git config user.name "mgroup-bot"
+          git config user.email "bot@mgroup.local"
+          TAG_SHA=$(git rev-parse HEAD)
+          echo "Tagging SHA: $TAG_SHA"
+          git tag -a v0.1-server-core -m "Server core: DB, security,
+            ledger, device auth, payments, balance-check. First
+            end-to-end REST feature (Cashier online)." "$TAG_SHA"
+          git push origin v0.1-server-core
+      - name: Verify
+        run: |
+          git ls-remote --tags origin v0.1-server-core

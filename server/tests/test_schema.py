@@ -274,46 +274,57 @@ def migrated_legacy_source_db():
     return engine
 
 
-def test_migration_0004_reverts_source_enums_and_downgrade():
+def downgrade_to_0003_with_fk_off(engine) -> None:
+    """Downgrade the corrective migration with SQLite FK checks suspended."""
+    config = Config(str(ALEMBIC_INI))
+    connection = engine.connect()
+    config.attributes["connection"] = connection
+    raw_connection = connection.connection.driver_connection
+    raw_connection.execute("PRAGMA foreign_keys=OFF")
+    try:
+        command.downgrade(config, "0003")
+    finally:
+        raw_connection.execute("PRAGMA foreign_keys=ON")
+        connection.close()
+
+
+def test_migration_0004_reverts_cashier_txn_source():
     engine = migrated_legacy_source_db()
     try:
         with engine.connect() as connection:
-            temp_table_count = connection.scalar(
+            assert connection.scalar(
                 text(
                     "SELECT COUNT(*) FROM sqlite_master "
                     "WHERE type='table' AND name='_0004_source_revert_map'"
                 )
-            )
-            assert temp_table_count == 0
-            txn_sources = set(
+            ) == 0
+            sources = set(
                 connection.scalars(text("SELECT DISTINCT source FROM transactions"))
             )
-            request_sources = set(
-                connection.scalars(text("SELECT DISTINCT source FROM topup_requests"))
-            )
-            assert txn_sources == {"ONLINE", "OFFLINE_SYNC", "ADMIN"}
-            assert request_sources == {"WEBUI", "CASHIER"}
-
-        # Verify the symmetric legacy enum sets after downgrade.
-        config = Config(str(ALEMBIC_INI))
-        connection = engine.connect()
-        config.attributes["connection"] = connection
-        raw_connection = connection.connection.driver_connection
-        raw_connection.execute("PRAGMA foreign_keys=OFF")
-        try:
-            command.downgrade(config, "0003")
-        finally:
-            raw_connection.execute("PRAGMA foreign_keys=ON")
-            connection.close()
-
+            assert sources == {"ONLINE", "OFFLINE_SYNC", "ADMIN"}
+        downgrade_to_0003_with_fk_off(engine)
         with engine.connect() as connection:
-            txn_sources = set(
+            sources = set(
                 connection.scalars(text("SELECT DISTINCT source FROM transactions"))
             )
-            request_sources = set(
+            assert sources == {"ONLINE", "OFFLINE_SYNC", "CASHIER"}
+    finally:
+        engine.dispose()
+
+
+def test_migration_0004_reverts_admin_topup_source():
+    engine = migrated_legacy_source_db()
+    try:
+        with engine.connect() as connection:
+            sources = set(
                 connection.scalars(text("SELECT DISTINCT source FROM topup_requests"))
             )
-            assert txn_sources == {"ONLINE", "OFFLINE_SYNC", "CASHIER"}
-            assert request_sources == {"CASHIER", "ADMIN"}
+            assert sources == {"WEBUI", "CASHIER"}
+        downgrade_to_0003_with_fk_off(engine)
+        with engine.connect() as connection:
+            sources = set(
+                connection.scalars(text("SELECT DISTINCT source FROM topup_requests"))
+            )
+            assert sources == {"ADMIN", "CASHIER"}
     finally:
         engine.dispose()

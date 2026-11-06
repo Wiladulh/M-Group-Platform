@@ -152,7 +152,6 @@ def test_payment_success_online(cashier):
     assert "OK: 1 members verified" in output.getvalue()
 
 
-
 def test_verify_ledger_after_three_successful_payments(cashier):
     for index in range(3):
         response = post_payment(
@@ -165,6 +164,7 @@ def test_verify_ledger_after_three_successful_payments(cashier):
     with redirect_stdout(output):
         assert cli.verify_ledger() == 0
     assert output.getvalue().strip() == "OK: 1 members verified"
+
 
 def test_payment_pin_wrong_attempts_left(cashier):
     response = post_payment(cashier, pin="9999")
@@ -189,9 +189,9 @@ def test_payment_insufficient_balance(cashier):
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "INSUFFICIENT_BALANCE"
     with cashier["factory"]() as session:
-        assert session.scalar(
-            select(Transaction.id).where(Transaction.txn_uuid == "pay-0001")
-        ) is None
+        assert (
+            session.scalar(select(Transaction.id).where(Transaction.txn_uuid == "pay-0001")) is None
+        )
 
 
 def test_payment_clock_skew(cashier):
@@ -205,7 +205,9 @@ def test_payment_card_unknown(cashier):
     assert response.json()["error"]["code"] == "CARD_UNKNOWN"
 
 
-@pytest.mark.parametrize(("status", "code"), [("LOCKED", "CARD_LOCKED"), ("INACTIVE", "CARD_INACTIVE")])
+@pytest.mark.parametrize(
+    ("status", "code"), [("LOCKED", "CARD_LOCKED"), ("INACTIVE", "CARD_INACTIVE")]
+)
 def test_payment_card_status(cashier, status, code):
     with cashier["factory"].begin() as session:
         session.scalar(select(Card)).status = status
@@ -229,7 +231,10 @@ def test_payment_duplicate_same_payload(cashier):
     assert second.json() == first.json()
     with cashier["factory"]() as session:
         assert session.scalar(select(Member.balance)) == 15_000
-        assert len(session.scalars(select(Transaction).where(Transaction.type == "PAYMENT")).all()) == 1
+        assert (
+            len(session.scalars(select(Transaction).where(Transaction.type == "PAYMENT")).all())
+            == 1
+        )
 
 
 def test_payment_duplicate_diff_payload(cashier):
@@ -273,9 +278,7 @@ def test_balance_check_wrong_pin_counts_toward_lockout(cashier):
 
 def test_get_transaction_own_device_200(cashier):
     assert post_payment(cashier).status_code == 200
-    response = cashier["client"].get(
-        "/api/v1/transactions/pay-0001", headers=headers(cashier)
-    )
+    response = cashier["client"].get("/api/v1/transactions/pay-0001", headers=headers(cashier))
     assert response.status_code == 200
     assert response.json()["direction"] == "DEBIT"
 
@@ -290,9 +293,7 @@ def test_get_transaction_other_device_404(cashier):
 
 
 def test_get_transaction_not_found_404(cashier):
-    response = cashier["client"].get(
-        "/api/v1/transactions/no-such-txn", headers=headers(cashier)
-    )
+    response = cashier["client"].get("/api/v1/transactions/no-such-txn", headers=headers(cashier))
     assert response.status_code == 404
     assert response.json()["error"]["message"] == "Transaksi tidak ditemukan"
 
@@ -335,7 +336,6 @@ def test_logs_do_not_contain_secrets(cashier, caplog):
     assert "payment_completed" in caplog.text
 
 
-
 def test_log_redaction_filter_masks_all_sensitive_fields():
     import logging
 
@@ -355,6 +355,7 @@ def test_log_redaction_filter_masks_all_sensitive_fields():
     for secret in ("4610", "abc123", "secret-token", "A1B2C3D4", "1234567890123456"):
         assert secret not in rendered
     assert "C3D4" in rendered
+
 
 def test_device_config_route_remains_available(cashier):
     response = cashier["client"].get("/api/v1/device/config", headers=headers(cashier))

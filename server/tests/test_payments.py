@@ -39,7 +39,7 @@ def cashier(tmp_path, monkeypatch):
             full_name="Member Test",
             nik_enc="encrypted-test",
             nik_idx="blind-index-test",
-            balance=20_000,
+            balance=0,
             status="ACTIVE",
         )
         session.add(member)

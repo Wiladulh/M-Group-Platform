@@ -181,7 +181,6 @@ class PaymentService:
             if current_card is None or current_member is None:
                 raise DomainError(code="CARD_UNKNOWN", status_code=422)
             current_card.pin_fail_count = 0
-            current_member.balance = current_member.balance
             self.session.add(
                 AuditLog(
                     actor_type="DEVICE",

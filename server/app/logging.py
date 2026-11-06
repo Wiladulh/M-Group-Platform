@@ -7,21 +7,28 @@ from datetime import UTC, datetime
 
 
 class SecretRedactionFilter(logging.Filter):
-    """Redact PINs, bearer credentials, full card UIDs, and NIK values."""
+    """Redact PINs, bearer credentials, device header values, full UIDs, and NIKs."""
 
     _patterns = (
-        (re.compile(r"(?i)(bearer\\s+)[A-Za-z0-9._~+/=-]+"), r"\\1[REDACTED]"),
-        (re.compile(r"(?i)(pin[\\"']?\\s*[:=]\\s*[\\"']?)\\d{4}"), r"\\1[REDACTED]"),
-        (re.compile(r"(?i)(authorization[\\"']?\\s*[:=]\\s*[\\"']?)[^,}\\s]+"), r"\\1[REDACTED]"),
-        (re.compile(r"(?i)(nik[\\"']?\\s*[:=]\\s*[\\"']?)[0-9]{8,}"), r"\\1[REDACTED]"),
-        (re.compile(r"(?i)(uid[\\"']?\\s*[:=]\\s*[\\"']?)([0-9a-f]{8,20})"), None),
+        (re.compile(r"(?i)(bearer\s+)[A-Za-z0-9._~+/=-]+"), r"\1[REDACTED]"),
+        (re.compile(r"(?i)(pin[\"']?\s*[:=]\s*[\"']?)\d{4}"), r"\1[REDACTED]"),
+        (re.compile(r"(?i)(authorization[\"']?\s*[:=]\s*[\"']?)[^,}\s]+"), r"\1[REDACTED]"),
+        (re.compile(r"(?i)(x-device-id[\"']?\s*[:=]\s*[\"']?)[^,}\s]+"), r"\1[REDACTED]"),
+        (re.compile(r"(?i)(nik[\"']?\s*[:=]\s*[\"']?)[0-9]{8,}"), r"\1[REDACTED]"),
+        (re.compile(r"(?i)(uid[\"']?\s*[:=]\s*[\"']?)([0-9a-f]{8,20})"), None),
     )
 
     def filter(self, record: logging.LogRecord) -> bool:
         message = record.getMessage()
         for pattern, replacement in self._patterns:
             if replacement is None:
-                message = pattern.sub(lambda m: f"{m.group(1)}{'*' * (len(m.group(2)) - 4)}{m.group(2)[-4:]}", message)
+                message = pattern.sub(
+                    lambda match: (
+                        f"{match.group(1)}"
+                        f"{'*' * (len(match.group(2)) - 4)}{match.group(2)[-4:]}"
+                    ),
+                    message,
+                )
             else:
                 message = pattern.sub(replacement, message)
         record.msg = message

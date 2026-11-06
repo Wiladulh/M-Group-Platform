@@ -142,8 +142,7 @@ def test_topup_success(topup_env):
             == "CASHIER"
         )
         assert (
-            session.scalar(select(AuditLog).where(AuditLog.action == "topup.cashier"))
-            is not None
+            session.scalar(select(AuditLog).where(AuditLog.action == "topup.cashier")) is not None
         )
         assert sum(r.amount for r in session.scalars(select(OfflineAllowance)).all()) <= 15_000
 

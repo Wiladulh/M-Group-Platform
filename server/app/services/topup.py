@@ -1,4 +1,5 @@
 """Cashier top-up orchestration with independent PIN lockout commits."""
+
 import json
 from datetime import UTC, datetime, timedelta
 
@@ -96,9 +97,7 @@ def _verify_member_pin(session: Session, card_id: int, pin: str, pin_hash: str) 
             attempts_left = 3 - card.pin_fail_count
     if locked:
         raise DomainError(code="CARD_LOCKED", status_code=422)
-    raise DomainError(
-        code="INVALID_PIN", status_code=422, details={"attempts_left": attempts_left}
-    )
+    raise DomainError(code="INVALID_PIN", status_code=422, details={"attempts_left": attempts_left})
 
 
 def _operator_failure(session: Session, operator_id: int) -> None:

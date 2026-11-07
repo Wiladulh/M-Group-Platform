@@ -1,7 +1,6 @@
 """Real WebSocket E2E coverage for REPLACE_CARD and PIN_ONLY binding modes."""
 
 import asyncio
-import threading
 from datetime import UTC, datetime
 
 import pytest
@@ -40,9 +39,7 @@ def _ack(ws, message: dict, sequence: int) -> None:
     )
 
 
-async def _connect_and_start(client, token: str, session_uuid: str, mode: str):
-    ws = client.websocket_connect("/ws/device")
-    ws.__enter__()
+async def _connect_and_start(ws, token: str, session_uuid: str, mode: str):
     ws.send_json(_hello(token))
     hello_ok = await _receive_json(ws)
     assert hello_ok["type"] == "hello_ok"
@@ -51,7 +48,6 @@ async def _connect_and_start(client, token: str, session_uuid: str, mode: str):
     assert start["data"]["mode"] == mode
     assert start["data"]["session_uuid"] == session_uuid
     _ack(ws, start, 2)
-    return ws
 
 
 def _send_scan(ws, session_uuid: str, uid: str) -> None:
@@ -97,8 +93,8 @@ async def test_replace_card_via_websocket_e2e(tmp_path, monkeypatch):
     session_uuid = _create_session(factory, member_id, device_id, "REPLACE_CARD")
     try:
         with TestClient(app) as client:
-            ws = await _connect_and_start(client, token, session_uuid, "REPLACE_CARD")
-            with ws:
+            with client.websocket_connect("/ws/device") as ws:
+                await _connect_and_start(ws, token, session_uuid, "REPLACE_CARD")
                 _send_scan(ws, session_uuid, "11223344")
                 with factory() as session:
                     bind = session.scalar(
@@ -158,8 +154,8 @@ async def test_pin_only_via_websocket_e2e(tmp_path, monkeypatch):
     session_uuid = _create_session(factory, member_id, device_id, "PIN_ONLY")
     try:
         with TestClient(app) as client:
-            ws = await _connect_and_start(client, token, session_uuid, "PIN_ONLY")
-            with ws:
+            with client.websocket_connect("/ws/device") as ws:
+                await _connect_and_start(ws, token, session_uuid, "PIN_ONLY")
                 _send_scan(ws, session_uuid, "AABBCCDD")
                 _send_pin(ws, session_uuid, "8472")
                 done = None
@@ -199,8 +195,8 @@ async def test_replace_card_via_websocket_uid_conflict(tmp_path, monkeypatch):
     session_uuid = _create_session(factory, member_id, device_id, "REPLACE_CARD")
     try:
         with TestClient(app) as client:
-            ws = await _connect_and_start(client, token, session_uuid, "REPLACE_CARD")
-            with ws:
+            with client.websocket_connect("/ws/device") as ws:
+                await _connect_and_start(ws, token, session_uuid, "REPLACE_CARD")
                 _send_scan(ws, session_uuid, "11223344")
                 error = await _receive_json(ws)
                 assert error["type"] == "bind.error"
@@ -224,8 +220,8 @@ async def test_pin_only_via_websocket_unknown_uid(tmp_path, monkeypatch):
     session_uuid = _create_session(factory, member_id, device_id, "PIN_ONLY")
     try:
         with TestClient(app) as client:
-            ws = await _connect_and_start(client, token, session_uuid, "PIN_ONLY")
-            with ws:
+            with client.websocket_connect("/ws/device") as ws:
+                await _connect_and_start(ws, token, session_uuid, "PIN_ONLY")
                 _send_scan(ws, session_uuid, "11223344")
                 error = await _receive_json(ws)
                 assert error["type"] == "bind.error"
@@ -245,8 +241,8 @@ async def test_pin_only_via_websocket_wrong_member(tmp_path, monkeypatch):
     session_uuid = _create_session(factory, member_id, device_id, "PIN_ONLY")
     try:
         with TestClient(app) as client:
-            ws = await _connect_and_start(client, token, session_uuid, "PIN_ONLY")
-            with ws:
+            with client.websocket_connect("/ws/device") as ws:
+                await _connect_and_start(ws, token, session_uuid, "PIN_ONLY")
                 _send_scan(ws, session_uuid, "AABBCCDD")
                 error = await _receive_json(ws)
                 assert error["type"] == "bind.error"

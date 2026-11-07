@@ -182,10 +182,10 @@ def test_sync_unknown_card_no_shortfall(sync_db):
 def test_sync_idempotent_same_txn_uuid(sync_db):
     _, factory, device_id, member_id, _ = sync_db
     with factory() as session:
-        device = session.get(Device, device_id)
+        device = SimpleNamespace(id=device_id, device_id="CSH-001", type="cashier")
         SyncService(session).process_batch(device, _batch(batch_uuid="first-batch"))
     with factory() as session:
-        device = session.get(Device, device_id)
+        device = SimpleNamespace(id=device_id, device_id="CSH-001", type="cashier")
         response = SyncService(session).process_batch(device, _batch(batch_uuid="second-batch"))
         assert response.results[0].status == "DUPLICATE"
     with factory() as session:
@@ -195,10 +195,10 @@ def test_sync_idempotent_same_txn_uuid(sync_db):
 def test_sync_batch_idempotent_same_batch_uuid(sync_db):
     _, factory, device_id, member_id, _ = sync_db
     with factory() as session:
-        device = session.get(Device, device_id)
+        device = SimpleNamespace(id=device_id, device_id="CSH-001", type="cashier")
         SyncService(session).process_batch(device, _batch())
     with factory() as session:
-        device = session.get(Device, device_id)
+        device = SimpleNamespace(id=device_id, device_id="CSH-001", type="cashier")
         response = SyncService(session).process_batch(device, _batch())
         assert response.results[0].status == "DUPLICATE"
     with factory() as session:
@@ -211,10 +211,10 @@ def test_sync_batch_idempotent_same_batch_uuid(sync_db):
 def test_sync_duplicate_payload_conflict(sync_db):
     _, factory, device_id, _member_id, _ = sync_db
     with factory() as session:
-        device = session.get(Device, device_id)
+        device = SimpleNamespace(id=device_id, device_id="CSH-001", type="cashier")
         SyncService(session).process_batch(device, _batch(batch_uuid="original"))
     with factory() as session:
-        device = session.get(Device, device_id)
+        device = SimpleNamespace(id=device_id, device_id="CSH-001", type="cashier")
         response = SyncService(session).process_batch(
             device, _batch(price=4_000, batch_uuid="conflict")
         )
@@ -231,7 +231,7 @@ def test_sync_order_preserved(sync_db):
         SyncItem(txn_uuid="ordered-2", uid="A1B2C3D4", price=1_000, offline_ts=now-2),
     ])
     with factory() as session:
-        device = session.get(Device, device_id)
+        device = SimpleNamespace(id=device_id, device_id="CSH-001", type="cashier")
         SyncService(session).process_batch(device, batch)
     with factory() as session:
         rows = session.scalars(select(Transaction).where(
@@ -243,7 +243,7 @@ def test_sync_order_preserved(sync_db):
 def test_sync_dispense_failed_triggers_refund(sync_db):
     _, factory, device_id, member_id, _ = sync_db
     with factory() as session:
-        device = session.get(Device, device_id)
+        device = SimpleNamespace(id=device_id, device_id="CSH-001", type="cashier")
         SyncService(session).process_batch(
             device, _batch(dispense_result="failed", txn_uuid="failed-dispense")
         )
@@ -262,7 +262,7 @@ def test_sync_dispense_failed_triggers_refund(sync_db):
 def test_sync_pin_fail_events_lockout(sync_db):
     _, factory, device_id, _member_id, card_id = sync_db
     with factory() as session:
-        device = session.get(Device, device_id)
+        device = SimpleNamespace(id=device_id, device_id="CSH-001", type="cashier")
         response = SyncService(session).process_batch(
             device, _batch(pin_fail_events=3, txn_uuid="pin-fail-payment")
         )
@@ -277,7 +277,7 @@ def test_sync_member_cache_version_increments(sync_db):
     with factory() as session:
         before = get_member_cache_version(session)
     with factory() as session:
-        device = session.get(Device, device_id)
+        device = SimpleNamespace(id=device_id, device_id="CSH-001", type="cashier")
         response = SyncService(session).process_batch(device, _batch())
         assert response.cache_version > before
 
@@ -285,7 +285,7 @@ def test_sync_member_cache_version_increments(sync_db):
 def test_sync_returns_cache_delta(sync_db):
     _, factory, device_id, _member_id, _ = sync_db
     with factory() as session:
-        device = session.get(Device, device_id)
+        device = SimpleNamespace(id=device_id, device_id="CSH-001", type="cashier")
         response = SyncService(session).process_batch(device, _batch())
         assert response.member_cache_delta
         assert response.member_cache_delta[0].balance_snapshot == 5_000
@@ -294,7 +294,7 @@ def test_sync_returns_cache_delta(sync_db):
 def test_sync_clock_skew_offline(sync_db):
     _, factory, device_id, member_id, _ = sync_db
     with factory() as session:
-        device = session.get(Device, device_id)
+        device = SimpleNamespace(id=device_id, device_id="CSH-001", type="cashier")
         response = SyncService(session).process_batch(
             device, _batch(offline_ts=int(datetime.now(UTC).timestamp()) + 400)
         )

@@ -362,7 +362,7 @@ def test_pin_only_unlocks_card_and_resets_pin_fail_count(tmp_path, monkeypatch):
             card = session.get(Card, card_id)
             assert card.status == "ACTIVE"
             assert card.pin_fail_count == 0
-            assert card.bound_at > datetime.now(UTC) - timedelta(minutes=1)
+            assert card.bound_at.replace(tzinfo=UTC) > datetime.now(UTC) - timedelta(minutes=1)
     finally:
         engine.dispose()
 

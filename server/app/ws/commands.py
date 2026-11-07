@@ -23,9 +23,7 @@ async def send_bind_start(
     return await manager.send_with_ack(device_id_pk, envelope)
 
 
-async def send_bind_error(
-    device_id_pk: int, session_uuid: str, code: str, message: str
-) -> bool:
+async def send_bind_error(device_id_pk: int, session_uuid: str, code: str, message: str) -> bool:
     envelope = EnvelopeEnvelope.build(
         "bind.error",
         {"session_uuid": session_uuid, "code": code, "message": message},
@@ -33,9 +31,7 @@ async def send_bind_error(
     return await manager.send_with_ack(device_id_pk, envelope)
 
 
-async def send_bind_done(
-    device_id_pk: int, session_uuid: str, uid: str, status: str
-) -> bool:
+async def send_bind_done(device_id_pk: int, session_uuid: str, uid: str, status: str) -> bool:
     uid_masked = "••••" + uid[-4:]
     envelope = EnvelopeEnvelope.build(
         "bind.done",

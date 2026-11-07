@@ -326,5 +326,7 @@ def test_migration_0004_reverts_admin_topup_source():
 
 
 def test_bind_session_migration_adds_pin_confirmation_columns(schema_engine) -> None:
-    columns = {column["name"] for column in inspect(schema_engine).get_columns("card_bind_sessions")}
+    columns = {
+        column["name"] for column in inspect(schema_engine).get_columns("card_bind_sessions")
+    }
     assert {"pin_attempts", "pin_candidate_hash"} <= columns

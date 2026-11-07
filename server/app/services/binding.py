@@ -64,8 +64,7 @@ class BindingService:
         active = self.session.scalar(
             select(CardBindSession).where(
                 CardBindSession.state.in_(ACTIVE_STATES),
-                (CardBindSession.device_id == device_id)
-                | (CardBindSession.member_id == member_id),
+                (CardBindSession.device_id == device_id) | (CardBindSession.member_id == member_id),
             )
         )
         if active is not None:
@@ -106,16 +105,13 @@ class BindingService:
             self.session.flush()
         return row
 
-    def on_card_scanned(
-        self, session_uuid: str, uid: str, hw_ts_utc: datetime
-    ) -> CardBindSession:
+    def on_card_scanned(self, session_uuid: str, uid: str, hw_ts_utc: datetime) -> CardBindSession:
         row = self._get_session(session_uuid)
         if row.state not in {"WAITING_CARD", "WAITING_DEVICE"}:
             raise _raise("BIND_FAILED", "Sesi tidak sedang menunggu kartu")
         normalized_uid = uid.strip().upper()
-        if (
-            len(normalized_uid) not in {8, 14, 20}
-            or any(char not in "0123456789ABCDEF" for char in normalized_uid)
+        if len(normalized_uid) not in {8, 14, 20} or any(
+            char not in "0123456789ABCDEF" for char in normalized_uid
         ):
             self._fail(row, "UID kartu tidak valid")
             raise _raise("VALIDATION_ERROR", "UID kartu tidak valid")

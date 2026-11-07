@@ -147,7 +147,7 @@ def test_create_session_new_card(tmp_path, monkeypatch):
             )
             assert row.state == "WAITING_DEVICE"
             assert row.mode == "NEW_CARD"
-            assert row.expires_at > datetime.now(UTC)
+            assert row.expires_at.replace(tzinfo=UTC) > datetime.now(UTC)
     finally:
         engine.dispose()
 
@@ -186,29 +186,54 @@ def test_new_card_happy_path_end_to_end_over_real_websocket(tmp_path, monkeypatc
     unsubscribe_status = _bus.subscribe(CardStatusChangedEvent, published.append)
     try:
         with TestClient(app) as client, client.websocket_connect("/ws/device") as ws:
-            ws.send_json({
-                "v": 1, "id": "hello-bind", "type": "hello", "ts": 1,
-                "data": {"device_id": "CSH-BIND", "token": token, "fw_version": "test"},
-            })
+            ws.send_json(
+                {
+                    "v": 1,
+                    "id": "hello-bind",
+                    "type": "hello",
+                    "ts": 1,
+                    "data": {"device_id": "CSH-BIND", "token": token, "fw_version": "test"},
+                }
+            )
             assert ws.receive_json()["type"] == "hello_ok"
-            ws.send_json({
-                "v": 1, "id": "scan-1", "type": "bind.card_scanned", "ts": 2,
-                "data": {"session_uuid": session_uuid, "uid": "AABBCCDD", "ts": 2},
-            })
-            ws.send_json({
-                "v": 1, "id": "pin-1", "type": "bind.pin_submitted", "ts": 3,
-                "data": {"session_uuid": session_uuid, "pin": "4610", "confirm": "4610", "ts": 3},
-            })
+            ws.send_json(
+                {
+                    "v": 1,
+                    "id": "scan-1",
+                    "type": "bind.card_scanned",
+                    "ts": 2,
+                    "data": {"session_uuid": session_uuid, "uid": "AABBCCDD", "ts": 2},
+                }
+            )
+            ws.send_json(
+                {
+                    "v": 1,
+                    "id": "pin-1",
+                    "type": "bind.pin_submitted",
+                    "ts": 3,
+                    "data": {
+                        "session_uuid": session_uuid,
+                        "pin": "4610",
+                        "confirm": "4610",
+                        "ts": 3,
+                    },
+                }
+            )
             messages = []
             for _ in range(4):
                 message = ws.receive_json()
                 messages.append(message)
                 if message["type"] == "bind.done":
                     assert message["data"]["uid_masked"] == "••••CCDD"
-                    ws.send_json({
-                        "v": 1, "id": "ack-done", "type": "ack", "ts": 4,
-                        "data": {"id": message["id"]},
-                    })
+                    ws.send_json(
+                        {
+                            "v": 1,
+                            "id": "ack-done",
+                            "type": "ack",
+                            "ts": 4,
+                            "data": {"id": message["id"]},
+                        }
+                    )
                     break
             assert any(message["type"] == "bind.done" for message in messages)
         with factory() as session:
@@ -236,9 +261,7 @@ def test_new_card_uid_conflict_marks_session_failed(tmp_path, monkeypatch):
     try:
         with factory.begin() as session:  # noqa: SIM117
             with pytest.raises(DomainError) as exc:
-                BindingService(session).on_card_scanned(
-                    session_uuid, "AABBCCDD", datetime.now(UTC)
-                )
+                BindingService(session).on_card_scanned(session_uuid, "AABBCCDD", datetime.now(UTC))
         assert exc.value.code == "BIND_CONFLICT"
         with factory() as session:
             row = session.scalar(
@@ -292,7 +315,7 @@ def test_pin_mismatch_three_times_fails_session(tmp_path, monkeypatch):
 
 def test_replace_card_happy_path_is_atomic_and_deletes_allowance(tmp_path, monkeypatch):
     engine, factory, member_id, device_id, _token = _database(tmp_path, monkeypatch)
-    old_card_id = _add_card(factory)
+    old_card_id = _add_card(factory, member_id)
     with factory.begin() as session:  # noqa: SIM117
         session.add(
             OfflineAllowance(
@@ -316,9 +339,12 @@ def test_replace_card_happy_path_is_atomic_and_deletes_allowance(tmp_path, monke
             assert old_card.deactivated_reason == "card_replaced"
             assert new_card.status == "ACTIVE"
             assert session.get(Member, member_id).balance == 10_000
-            assert session.scalars(
-                select(OfflineAllowance).where(OfflineAllowance.member_id == member_id)
-            ).all() == []
+            assert (
+                session.scalars(
+                    select(OfflineAllowance).where(OfflineAllowance.member_id == member_id)
+                ).all()
+                == []
+            )
         assert invalidations and invalidations[0].uid_list == ["AABBCCDD"]
     finally:
         unsubscribe()
@@ -327,7 +353,7 @@ def test_replace_card_happy_path_is_atomic_and_deletes_allowance(tmp_path, monke
 
 def test_pin_only_unlocks_card_and_resets_pin_fail_count(tmp_path, monkeypatch):
     engine, factory, member_id, device_id, _token = _database(tmp_path, monkeypatch)
-    card_id = _add_card(factory, status="LOCKED", pin_fail_count=3)
+    card_id = _add_card(factory, member_id, status="LOCKED", pin_fail_count=3)
     session_uuid = _create_session(factory, member_id, device_id, "PIN_ONLY")
     try:
         _scan(factory, session_uuid, "AABBCCDD")
@@ -445,7 +471,7 @@ async def test_bind_done_masks_uid(tmp_path, monkeypatch):
     monkeypatch.setitem(manager._connections, device_id, socket)
     try:
         assert await send_bind_done(device_id, "session-id", "AABBCCDDEEFF", "ACTIVE")
-        assert socket.sent["data"]["uid_masked"] == "••••DDEEFF"
+        assert socket.sent["data"]["uid_masked"] == "••••EEFF"
         manager.record_ack(device_id, socket.sent["id"])
     finally:
         engine.dispose()
@@ -457,22 +483,37 @@ def test_device_cancel_over_real_websocket(tmp_path, monkeypatch):
     session_uuid = _create_session(factory, member_id, device_id)
     try:
         with TestClient(app) as client, client.websocket_connect("/ws/device") as ws:
-            ws.send_json({
-                "v": 1, "id": "hello-cancel", "type": "hello", "ts": 1,
-                "data": {"device_id": "CSH-BIND", "token": token, "fw_version": "test"},
-            })
+            ws.send_json(
+                {
+                    "v": 1,
+                    "id": "hello-cancel",
+                    "type": "hello",
+                    "ts": 1,
+                    "data": {"device_id": "CSH-BIND", "token": token, "fw_version": "test"},
+                }
+            )
             assert ws.receive_json()["type"] == "hello_ok"
-            ws.send_json({
-                "v": 1, "id": "cancel-1", "type": "bind.cancel", "ts": 2,
-                "data": {"session_uuid": session_uuid, "reason": "operator_cancelled"},
-            })
+            ws.send_json(
+                {
+                    "v": 1,
+                    "id": "cancel-1",
+                    "type": "bind.cancel",
+                    "ts": 2,
+                    "data": {"session_uuid": session_uuid, "reason": "operator_cancelled"},
+                }
+            )
             response = ws.receive_json()
             assert response["type"] == "bind.cancel"
             assert response["data"]["reason"] == "operator_cancelled"
-            ws.send_json({
-                "v": 1, "id": "ack-cancel", "type": "ack", "ts": 3,
-                "data": {"id": response["id"]},
-            })
+            ws.send_json(
+                {
+                    "v": 1,
+                    "id": "ack-cancel",
+                    "type": "ack",
+                    "ts": 3,
+                    "data": {"id": response["id"]},
+                }
+            )
         with factory() as session:
             row = session.scalar(
                 select(CardBindSession).where(CardBindSession.session_uuid == session_uuid)

@@ -1,7 +1,6 @@
 """Versioned Pydantic models for the bidirectional device WebSocket protocol."""
 
 from typing import Literal
-from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 

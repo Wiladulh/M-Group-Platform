@@ -34,7 +34,7 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 
 
-def _database(tmp_path, monkeypatch):
+def _database(tmp_path, monkeypatch, device_code="CSH-BIND"):
     engine = create_engine(
         f"sqlite:///{tmp_path / 'binding.db'}", connect_args={"check_same_thread": False}
     )
@@ -61,7 +61,7 @@ def _database(tmp_path, monkeypatch):
             status="ACTIVE",
         )
         device = Device(
-            device_id="CSH-BIND",
+            device_id=device_code,
             name="Binding cashier",
             type="cashier",
             token_hash=hash_device_token(token),

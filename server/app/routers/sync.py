@@ -9,7 +9,10 @@ from app.models import Card, Member, OfflineAllowance
 from app.schemas.sync import MemberCacheResponse, SyncBatch, SyncResponse
 from app.security.device_auth import DeviceAuthInfo, require_device
 from app.services.allowance import compute_cached_members_for_device
-from app.services.cache_version import get_member_cache_version
+from app.services.cache_version import (
+    get_member_cache_entry_version,
+    get_member_cache_version,
+)
 from app.services.sync import SyncService
 
 router = APIRouter(
@@ -59,12 +62,14 @@ def get_member_cache(
         .where(
             OfflineAllowance.device_id == device.id,
             Member.id.in_(member_ids),
-            OfflineAllowance.version > since,
         )
         .order_by(Member.member_code, Card.uid)
     ).all()
     entries = []
     for allowance, member, card in rows:
+        entry_version = get_member_cache_entry_version(session, member.id, device.id)
+        if entry_version <= since:
+            continue
         entries.append({
             "uid": card.uid,
             "member_code": member.member_code,
@@ -73,6 +78,6 @@ def get_member_cache(
             "snapshot_ts": allowance.computed_at.isoformat().replace("+00:00", "Z"),
             "offline_allowance": allowance.amount,
             "card_status": card.status,
-            "entry_version": allowance.version,
+            "entry_version": entry_version,
         })
     return MemberCacheResponse(cache_version=current, entries=entries)

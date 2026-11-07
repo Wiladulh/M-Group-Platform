@@ -32,3 +32,5 @@ class CardBindSession(TimestampMixin, Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     created_by_admin_id: Mapped[int] = mapped_column(ForeignKey("admin_users.id"), nullable=False)
     failure_reason: Mapped[str | None] = mapped_column(Text)
+    pin_attempts: Mapped[int] = mapped_column(default=0, server_default="0", nullable=False)
+    pin_candidate_hash: Mapped[str | None] = mapped_column(String(64))

@@ -15,6 +15,7 @@ from app.routers.payments import router as payments_router
 from app.routers.topups import router as topups_router
 from app.services.events import CacheUpdateEvent, CardStatusChangedEvent, CatalogChangedEvent, _bus
 from app.services.offline_monitor import offline_monitor_loop
+from app.services.bind_expiry import bind_expiry_loop
 from app.ws.broadcast import broadcast_bus
 from app.ws.connection_manager import manager
 from app.ws.handlers import ws_device_endpoint
@@ -33,12 +34,16 @@ async def lifespan(application: FastAPI):
     application.state.database_connection = connection
     await broadcast_bus.start()
     monitor = asyncio.create_task(offline_monitor_loop(application))
+    bind_expiry = asyncio.create_task(bind_expiry_loop(application))
     try:
         yield
     finally:
         monitor.cancel()
+        bind_expiry.cancel()
         with suppress(asyncio.CancelledError):
             await monitor
+        with suppress(asyncio.CancelledError):
+            await bind_expiry
         await broadcast_bus.stop()
         connection.close()
         engine.dispose()
@@ -131,6 +136,12 @@ def _broadcast_domain_event(event):
                     ),
                     target_device_id_pk=device_pk,
                 )
+    elif isinstance(event, CacheInvalidateEvent):
+        broadcast_bus.enqueue(
+            EnvelopeEnvelope.build(
+                "cache.invalidate", {"uid_list": event.uid_list, "all": event.all}
+            )
+        )
     elif isinstance(event, CardStatusChangedEvent):
         broadcast_bus.enqueue(
             EnvelopeEnvelope.build(
@@ -142,6 +153,7 @@ def _broadcast_domain_event(event):
 
 
 _bus.subscribe(CacheUpdateEvent, _broadcast_domain_event)
+_bus.subscribe(CacheInvalidateEvent, _broadcast_domain_event)
 _bus.subscribe(CardStatusChangedEvent, _broadcast_domain_event)
 _bus.subscribe(CatalogChangedEvent, _broadcast_domain_event)
 

@@ -14,6 +14,7 @@
 | P8 | AdminTopupService create/reverse, atomic internal ledger reversal, admin audit, REVERSE_INSUFFICIENT | DONE | e2509927de86ac37762842675e7b746b55a52dd4 |
 | P9 | Cache top-100 ordering, allowance recompute, hard hold mode, commit-aware CacheUpdateEvent | DONE | c2066b970db9317fcd97c8088da4cda5b34d41aa |
 | P10 | Authenticated device WebSocket, heartbeat, device events and event broadcast | DONE | 9af7106f209a63de37edd648f591767300b5ef23 |
+| P11 | Remote card binding state machine, PIN confirmation, command acknowledgements and expiry | IN PROGRESS | — |
 
 ## Catatan
 - P0 hanya membuat dokumentasi; belum ada kode aplikasi, firmware, migrasi, atau konfigurasi runtime.

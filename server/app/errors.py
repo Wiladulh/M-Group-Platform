@@ -13,6 +13,8 @@ ERROR_MESSAGES = {
     "REVERSE_INSUFFICIENT": "Saldo member sudah terpakai. Gunakan Koreksi Saldo setelah verifikasi.",
     "OPERATOR_INVALID": "Kode atau PIN operator salah",
     "OPERATOR_LOCKED": "Operator terkunci sementara",
+    "BIND_CONFLICT": "Sesi binding bertabrakan atau kartu sudah terdaftar",
+    "BIND_FAILED": "Proses binding gagal",
 }
 
 

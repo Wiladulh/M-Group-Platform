@@ -147,7 +147,7 @@ def test_one_active_connection_per_device_closes_old_socket_4001(tmp_path, monke
         engine.dispose()
 
 
-def test_bind_message_before_p11_closes_4004(tmp_path, monkeypatch):
+def test_unexpected_bind_start_from_device_is_ignored(tmp_path, monkeypatch):
     engine, factory = _database(tmp_path, monkeypatch)
     token = generate_device_token()
     _device(factory, token)
@@ -159,14 +159,13 @@ def test_bind_message_before_p11_closes_4004(tmp_path, monkeypatch):
                 {
                     "v": 1,
                     "id": "bind-1",
-                    "type": "bind.card_scanned",
+                    "type": "bind.start",
                     "ts": 2,
-                    "data": {"session_uuid": "session", "uid": "AABBCCDD", "ts": 2},
+                    "data": {"session_uuid": "session"},
                 }
             )
-            with pytest.raises(WebSocketDisconnect) as exc:
-                ws.receive_text()
-            assert exc.value.code == 4004
+            ws.send_json({"v": 1, "id": "ping-after-bind", "type": "ping", "ts": 3, "data": {}})
+            assert ws.receive_json()["id"] == "ping-after-bind"
     finally:
         engine.dispose()
 

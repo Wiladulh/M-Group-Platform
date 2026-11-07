@@ -128,3 +128,12 @@
 - BroadcastBus maintains an async consumer per active TestClient event loop and dispatches committed events through the most recently started active loop. This avoids cross-loop task awaits and duplicate event delivery when the session-scoped REST TestClient fixture coexists with per-test WebSocket clients.
 - The offline monitor tolerates a not-yet-migrated test database by logging and retrying on SQLAlchemy errors; production startup still expects the schema migrations to have been applied.
 - Cache update broadcasts are targeted per connected device so each device receives its own computed offline allowance; card status and catalog changes are broadcast to all connected devices.
+
+
+## P11 — Remote card binding
+- Every server binding command is tracked by envelope ID and expects an `ack` within 5 seconds. `BIND_ACK_TIMEOUT_S` may shorten this deadline in tests; acknowledgement timeout is warning-only and does not fail a committed bind.
+- PIN confirmation stores a peppered HMAC candidate hash, not plaintext. PIN mismatch increments the session retry counter; the third mismatch moves the session to FAILED. Successful DONE resets the retry counter and clears the candidate hash.
+- REPLACE_CARD changes old ACTIVE/LOCKED cards to REPLACED, removes the member's existing offline allowance rows, inserts the replacement, and queues cache invalidation/update events in the same database transaction.
+- PIN_ONLY requires the scanned UID to belong to the target member and the card to be ACTIVE or LOCKED. Unknown UID returns CARD_UNKNOWN; another member's UID returns BIND_CONFLICT.
+- Binding sessions expire after 90 seconds. The expiry worker scans every 5 seconds and sends an acknowledged bind.cancel command.
+- P11 deliberately adds no admin router or WebUI; P14 owns POST /admin/bind-sessions.

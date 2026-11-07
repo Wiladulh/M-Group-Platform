@@ -42,6 +42,14 @@ class CatalogChangedEvent(DomainEvent):
     version: int
 
 
+@dataclass(frozen=True, slots=True)
+class CacheInvalidateEvent(DomainEvent):
+    """Invalidate one or more card UIDs in device-side caches."""
+
+    uid_list: list[str] | None = None
+    all: bool = False
+
+
 class EventBus:
     """Simple in-process event dispatcher."""
 

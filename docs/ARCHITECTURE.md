@@ -25,3 +25,25 @@ In `offline_hold_mode=soft`, online payments may spend the full balance. In `har
 ## WebSocket layer (P10)
 
 The authenticated device transport is mounted at `/ws/device`, separately from REST routers. The device sends its token inside the first hello envelope. The connection manager enforces one socket per device and persists online/offline state and device events. Each database operation uses a short-lived SessionLocal session; no SQLAlchemy session is held for the socket lifetime. Committed domain events are bridged to an asyncio queue and broadcast to connected devices. Heartbeat defaults are 10-second ping target, 25-second pong timeout, and 30-second idle disconnect. Offline alerts are best-effort and controlled by ALERT_WEBHOOK_URL.
+
+
+## Remote card binding (P11)
+
+```mermaid
+sequenceDiagram
+  participant A as Admin UI (P14)
+  participant S as BindingService
+  participant D as Cashier Device
+  participant DB as Database
+  A->>S: create_session(member, device, mode)
+  S->>DB: persist WAITING_DEVICE, expires_at + 90s
+  A->>D: bind.start (ack required)
+  D->>S: bind.card_scanned
+  S->>DB: validate UID and move to WAITING_PIN
+  D->>S: bind.pin_submitted(pin, confirm)
+  S->>DB: atomic card/PIN/session mutation
+  S->>D: bind.done (masked UID, ack required)
+  S-->>D: cache/card events after commit
+```
+
+Binding supports NEW_CARD, REPLACE_CARD, and PIN_ONLY. The service owns the transactional state machine; P11 adds no admin router. P14 will expose the future `POST /admin/bind-sessions` endpoint.

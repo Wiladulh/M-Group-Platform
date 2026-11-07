@@ -10,8 +10,11 @@ from pydantic import ValidationError
 from sqlalchemy import select
 
 from app import db
+from app.errors import DomainError
 from app.models import Device
 from app.security.device_token import verify_device_token
+from app.services.binding import BindingService
+from app.ws.commands import send_bind_cancel, send_bind_done, send_bind_error
 from app.ws.connection_manager import manager
 from app.ws.heartbeat import heartbeat
 from app.ws.protocol import EnvelopeEnvelope, HelloData
@@ -106,15 +109,83 @@ async def ws_device_endpoint(websocket: WebSocket) -> None:
                             {"state": incoming.data.get("state"), "ts": incoming.ts}
                         )
             elif incoming.type == "ack":
+                manager.record_ack(device_pk, str(incoming.data.get("id", "")))
                 logger.debug(
                     "device_ws_ack device_id=%s message_id=%s",
                     hello.device_id,
                     incoming.data.get("id"),
                 )
+            elif incoming.type == "bind.card_scanned":
+                session_uuid = str(incoming.data.get("session_uuid", ""))
+                error = None
+                with db.SessionLocal.begin() as session:
+                    try:
+                        raw_ts = incoming.data.get("ts")
+                        hw_ts = (
+                            datetime.fromtimestamp(raw_ts, UTC)
+                            if isinstance(raw_ts, (int, float))
+                            else datetime.fromisoformat(str(raw_ts).replace("Z", "+00:00"))
+                        )
+                        BindingService(session).on_card_scanned(
+                            session_uuid, str(incoming.data.get("uid", "")), hw_ts
+                        )
+                    except (DomainError, ValueError, TypeError) as exc:
+                        error = exc
+                if error is not None:
+                    await send_bind_error(
+                        device_pk,
+                        session_uuid,
+                        getattr(error, "code", "VALIDATION_ERROR"),
+                        str(error),
+                    )
+            elif incoming.type == "bind.pin_submitted":
+                session_uuid = str(incoming.data.get("session_uuid", ""))
+                error = None
+                result = None
+                with db.SessionLocal.begin() as session:
+                    try:
+                        result = BindingService(session).on_pin_submitted(
+                            session_uuid,
+                            str(incoming.data.get("pin", "")),
+                            incoming.data.get("confirm"),
+                        )
+                    except DomainError as exc:
+                        error = exc
+                if error is not None:
+                    await send_bind_error(
+                        device_pk,
+                        session_uuid,
+                        getattr(error, "code", "VALIDATION_ERROR"),
+                        str(error),
+                    )
+                elif result is not None and result.state == "DONE":
+                    await send_bind_done(
+                        device_pk, session_uuid, result.uid_scanned or "", "ACTIVE"
+                    )
+            elif incoming.type == "bind.cancel":
+                session_uuid = str(incoming.data.get("session_uuid", ""))
+                reason = str(incoming.data.get("reason", "cancelled"))
+                error = None
+                with db.SessionLocal.begin() as session:
+                    try:
+                        BindingService(session).on_device_cancel(session_uuid)
+                    except DomainError as exc:
+                        error = exc
+                if error is not None:
+                    await send_bind_error(
+                        device_pk,
+                        session_uuid,
+                        getattr(error, "code", "BIND_FAILED"),
+                        str(error),
+                    )
+                else:
+                    await send_bind_cancel(device_pk, session_uuid, reason)
             elif incoming.type.startswith("bind."):
-                logger.warning("unexpected_bind_message_before_p11 device_id=%s", hello.device_id)
-                await websocket.close(code=4004, reason="bind_not_available")
-                break
+                logger.warning(
+                    "unknown_bind_message device_id=%s type=%s",
+                    hello.device_id,
+                    incoming.type,
+                )
             else:
                 logger.debug(
                     "device_ws_unknown_message device_id=%s type=%s",

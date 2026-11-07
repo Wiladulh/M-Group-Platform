@@ -1,6 +1,8 @@
 """Single active WebSocket connection per registered device."""
 
+import asyncio
 import logging
+import os
 from contextlib import suppress
 from datetime import UTC
 
@@ -22,6 +24,7 @@ class ConnectionManager:
         self._connections: dict[int, WebSocket] = {}
         self._last_pong_utc = {}
         self._connected_since = {}
+        self._pending_acks: dict[int, dict[str, asyncio.Task]] = {}
 
     async def connect(self, device_id_pk: int, ws: WebSocket) -> None:
         old = self._connections.get(device_id_pk)
@@ -66,6 +69,8 @@ class ConnectionManager:
         self._connections.pop(device_id_pk, None)
         self._last_pong_utc.pop(device_id_pk, None)
         since = self._connected_since.pop(device_id_pk, None)
+        for task in self._pending_acks.pop(device_id_pk, {}).values():
+            task.cancel()
         now = utc_now()
         with db.SessionLocal.begin() as session:
             device = session.get(Device, device_id_pk)
@@ -92,6 +97,34 @@ class ConnectionManager:
         except Exception:
             logger.warning("device_ws_send_failed device_pk=%s", device_id_pk)
             return False
+
+    async def send_with_ack(self, device_id_pk: int, envelope: EnvelopeEnvelope) -> bool:
+        timeout_s = float(os.getenv("BIND_ACK_TIMEOUT_S", "5"))
+        pending = self._pending_acks.setdefault(device_id_pk, {})
+        task = asyncio.create_task(self._ack_timeout(device_id_pk, envelope.id, timeout_s))
+        pending[envelope.id] = task
+        sent = await self.send(device_id_pk, envelope)
+        if not sent:
+            pending.pop(envelope.id, None)
+            task.cancel()
+        return sent
+
+    async def _ack_timeout(self, device_id_pk: int, message_id: str, timeout_s: float) -> None:
+        await asyncio.sleep(timeout_s)
+        pending = self._pending_acks.get(device_id_pk, {})
+        if pending.pop(message_id, None) is not None:
+            logger.warning(
+                "device_ws_ack_timeout device_pk=%s message_id=%s",
+                device_id_pk,
+                message_id,
+            )
+
+    def record_ack(self, device_id_pk: int, message_id: str) -> bool:
+        task = self._pending_acks.get(device_id_pk, {}).pop(message_id, None)
+        if task is None:
+            return False
+        task.cancel()
+        return True
 
     async def is_connected(self, device_id_pk: int) -> bool:
         return device_id_pk in self._connections

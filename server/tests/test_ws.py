@@ -36,7 +36,7 @@ def test_hello_success_and_ws_connected_flag(tmp_path, monkeypatch):
     token = generate_device_token()
     _device(factory, token)
     try:
-        with TestClient(app) as client:
+        with TestClient(app) as client:  # noqa: SIM117
             with client.websocket_connect("/ws/device") as ws:
                 ws.send_json(_hello(token))
                 response = ws.receive_json()
@@ -59,7 +59,7 @@ def test_hello_missing_and_invalid_token_close_codes(tmp_path, monkeypatch):
     token = generate_device_token()
     _device(factory, token)
     try:
-        with TestClient(app) as client:
+        with TestClient(app) as client:  # noqa: SIM117
             with client.websocket_connect("/ws/device") as ws:
                 ws.send_json({"v": 1, "id": "x", "type": "ping", "ts": 1, "data": {}})
                 try:
@@ -71,7 +71,7 @@ def test_hello_missing_and_invalid_token_close_codes(tmp_path, monkeypatch):
                 ws.send_json(_hello("wrong-token"))
                 try:
                     ws.receive_text()
-                    assert False, "expected close"
+                    raise AssertionError("expected close")
                 except WebSocketDisconnect as exc:
                     assert exc.code == 4003
     finally:
@@ -83,7 +83,7 @@ def test_ping_pong_echoes_message_id(tmp_path, monkeypatch):
     token = generate_device_token()
     _device(factory, token)
     try:
-        with TestClient(app) as client:
+        with TestClient(app) as client:  # noqa: SIM117
             with client.websocket_connect("/ws/device") as ws:
                 ws.send_json(_hello(token))
                 ws.receive_json()
@@ -99,12 +99,12 @@ def test_revoked_device_rejected(tmp_path, monkeypatch):
     token = generate_device_token()
     _device(factory, token, status="REVOKED")
     try:
-        with TestClient(app) as client:
+        with TestClient(app) as client:  # noqa: SIM117
             with client.websocket_connect("/ws/device") as ws:
                 ws.send_json(_hello(token))
                 try:
                     ws.receive_text()
-                    assert False, "expected close"
+                    raise AssertionError("expected close")
                 except WebSocketDisconnect as exc:
                     assert exc.code == 4003
     finally:

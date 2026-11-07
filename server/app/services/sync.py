@@ -8,15 +8,26 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import (
-    Card, Device, Member, OfflineAllowance, PendingSyncLog, Product,
-    ShortfallRecord, Transaction,
+    Card,
+    Device,
+    Member,
+    OfflineAllowance,
+    PendingSyncLog,
+    Product,
+    ShortfallRecord,
+    Transaction,
 )
 from app.schemas.sync import (
-    CacheEntryDelta, SyncBatch, SyncItem, SyncItemResult, SyncResponse,
+    CacheEntryDelta,
+    SyncBatch,
+    SyncItem,
+    SyncItemResult,
+    SyncResponse,
 )
 from app.services.allowance import AllowanceService
 from app.services.cache_version import (
-    bump_member_cache_version, get_member_cache_entry_version,
+    bump_member_cache_version,
+    get_member_cache_entry_version,
     get_member_cache_version,
 )
 from app.services.events import CardStatusChangedEvent

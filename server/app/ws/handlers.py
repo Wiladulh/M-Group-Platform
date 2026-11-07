@@ -90,9 +90,7 @@ async def ws_device_endpoint(websocket: WebSocket) -> None:
                     expires_at = pending_bind.expires_at
                     if expires_at.tzinfo is None:
                         expires_at = expires_at.replace(tzinfo=UTC)
-                    timeout_s = max(
-                        1, int((expires_at - datetime.now(UTC)).total_seconds())
-                    )
+                    timeout_s = max(1, int((expires_at - datetime.now(UTC)).total_seconds()))
                     asyncio.create_task(
                         send_bind_start(
                             device_pk,
@@ -191,9 +189,7 @@ async def ws_device_endpoint(websocket: WebSocket) -> None:
                     )
                 elif result is not None and result.state == "DONE":
                     asyncio.create_task(
-                        send_bind_done(
-                            device_pk, session_uuid, result.uid_scanned or "", "ACTIVE"
-                        )
+                        send_bind_done(device_pk, session_uuid, result.uid_scanned or "", "ACTIVE")
                     )
             elif incoming.type == "bind.cancel":
                 session_uuid = str(incoming.data.get("session_uuid", ""))

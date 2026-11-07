@@ -16,6 +16,7 @@ from app.routers.topups import router as topups_router
 from app.services.events import CacheUpdateEvent, CardStatusChangedEvent, CatalogChangedEvent, _bus
 from app.services.offline_monitor import offline_monitor_loop
 from app.ws.broadcast import broadcast_bus
+from app.ws.connection_manager import manager
 from app.ws.handlers import ws_device_endpoint
 from app.ws.protocol import EnvelopeEnvelope
 
@@ -117,17 +118,19 @@ async def ws_device(websocket: WebSocket):
 def _broadcast_domain_event(event):
     if isinstance(event, CacheUpdateEvent):
         for uid in event.uid_list:
-            broadcast_bus.enqueue(
-                EnvelopeEnvelope.build(
-                    "cache.update",
-                    {
-                        "uid": uid,
-                        "balance_snapshot": event.balance_snapshot,
-                        "offline_allowance": max(event.offline_allowance.values(), default=0),
-                        "card_status": event.card_status,
-                    },
+            for device_pk in manager.connected_devices():
+                broadcast_bus.enqueue(
+                    EnvelopeEnvelope.build(
+                        "cache.update",
+                        {
+                            "uid": uid,
+                            "balance_snapshot": event.balance_snapshot,
+                            "offline_allowance": event.offline_allowance.get(device_pk, 0),
+                            "card_status": event.card_status,
+                        },
+                    ),
+                    target_device_id_pk=device_pk,
                 )
-            )
     elif isinstance(event, CardStatusChangedEvent):
         broadcast_bus.enqueue(
             EnvelopeEnvelope.build(

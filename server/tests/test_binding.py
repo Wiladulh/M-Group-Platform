@@ -473,7 +473,6 @@ async def test_bind_done_masks_uid(tmp_path, monkeypatch):
         engine.dispose()
 
 
-
 def test_device_cancel_over_real_websocket(tmp_path, monkeypatch):
     engine, factory, member_id, device_id, token = _database(tmp_path, monkeypatch)
     session_uuid = _create_session(factory, member_id, device_id)

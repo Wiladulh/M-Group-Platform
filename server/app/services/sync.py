@@ -1,7 +1,6 @@
 """Sequential, idempotent offline batch synchronization."""
 
 import json
-import logging
 from datetime import UTC, datetime
 from uuid import UUID, uuid5
 
@@ -21,9 +20,7 @@ from app.services.cache_version import (
 )
 from app.services.events import CardStatusChangedEvent
 from app.services.ledger import InsufficientBalance, LedgerService
-from app.services.settings import get_setting
 
-logger = logging.getLogger(__name__)
 REFUND_NAMESPACE = UUID("5f5f0e1a-6c91-4a0a-a5d2-4e35cfc3d66a")
 
 
@@ -88,7 +85,7 @@ class SyncService:
                 member_code=member.member_code,
                 name=member.full_name,
                 balance_snapshot=member.balance,
-                snapshot_ts=allowance.computed_at.astimezone(UTC).isoformat().replace("+00:00", "Z"),
+                snapshot_ts=(allowance.computed_at.replace(tzinfo=UTC) if allowance.computed_at.tzinfo is None else allowance.computed_at.astimezone(UTC)).isoformat().replace("+00:00", "Z"),
                 offline_allowance=allowance.amount,
                 card_status=card.status,
                 entry_version=allowance.version,
@@ -204,7 +201,7 @@ class SyncService:
                     card_inactive_at_sync=inactive,
                 )
             except InsufficientBalance:
-                rejected = self._reject_row(
+                self._reject_row(
                     item, member=member, card=card, device=device,
                     reason="INSUFFICIENT_AT_SYNC", card_inactive=inactive,
                     items_json=serialized_items,

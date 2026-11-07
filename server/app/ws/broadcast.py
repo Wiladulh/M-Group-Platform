@@ -33,9 +33,7 @@ class BroadcastBus:
             with suppress(asyncio.CancelledError):
                 await task
 
-    def enqueue(
-        self, envelope: EnvelopeEnvelope, target_device_id_pk: int | None = None
-    ) -> None:
+    def enqueue(self, envelope: EnvelopeEnvelope, target_device_id_pk: int | None = None) -> None:
         if not self._consumers:
             return
         loop = next(reversed(self._consumers))
@@ -43,9 +41,7 @@ class BroadcastBus:
         if loop.is_running():
             loop.call_soon_threadsafe(queue.put_nowait, (envelope, target_device_id_pk))
 
-    async def _consume(
-        self, queue: asyncio.Queue[tuple[EnvelopeEnvelope, int | None]]
-    ) -> None:
+    async def _consume(self, queue: asyncio.Queue[tuple[EnvelopeEnvelope, int | None]]) -> None:
         while True:
             envelope, target_device_id_pk = await queue.get()
             device_ids = (

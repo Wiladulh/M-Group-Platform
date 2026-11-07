@@ -155,10 +155,15 @@ def test_bind_message_before_p11_closes_4004(tmp_path, monkeypatch):
         with TestClient(app) as client, client.websocket_connect("/ws/device") as ws:
             ws.send_json(_hello(token))
             ws.receive_json()
-            ws.send_json({
-                "v": 1, "id": "bind-1", "type": "bind.card_scanned", "ts": 2,
-                "data": {"session_uuid": "session", "uid": "AABBCCDD", "ts": 2},
-            })
+            ws.send_json(
+                {
+                    "v": 1,
+                    "id": "bind-1",
+                    "type": "bind.card_scanned",
+                    "ts": 2,
+                    "data": {"session_uuid": "session", "uid": "AABBCCDD", "ts": 2},
+                }
+            )
             with pytest.raises(WebSocketDisconnect) as exc:
                 ws.receive_text()
             assert exc.value.code == 4004
@@ -197,11 +202,16 @@ def test_cache_update_broadcast_to_all_connected_devices(tmp_path, monkeypatch):
                 with client.websocket_connect("/ws/device") as ws_b:
                     ws_b.send_json(_hello(token_b, "CSH-B", "hello-b"))
                     ws_b.receive_json()
-                    _bus.publish(CacheUpdateEvent(
-                        member_id=1, uid_list=["AABBCCDD"], balance_snapshot=9000,
-                        offline_allowance={1: 2000, 2: 3000}, card_status="ACTIVE",
-                        computed_at_utc=datetime.now(UTC).isoformat(),
-                    ))
+                    _bus.publish(
+                        CacheUpdateEvent(
+                            member_id=1,
+                            uid_list=["AABBCCDD"],
+                            balance_snapshot=9000,
+                            offline_allowance={1: 2000, 2: 3000},
+                            card_status="ACTIVE",
+                            computed_at_utc=datetime.now(UTC).isoformat(),
+                        )
+                    )
                     update_a = ws_a.receive_json()
                     update_b = ws_b.receive_json()
                     assert update_a["type"] == update_b["type"] == "cache.update"
@@ -229,9 +239,11 @@ def test_card_status_changed_broadcast_to_all_connected_devices(tmp_path, monkey
                     event_a = ws_a.receive_json()
                     event_b = ws_b.receive_json()
                     assert event_a["type"] == event_b["type"] == "card.status_changed"
-                    assert event_a["data"] == event_b["data"] == {
-                        "uid": "AABBCCDD", "status": "LOCKED"
-                    }
+                    assert (
+                        event_a["data"]
+                        == event_b["data"]
+                        == {"uid": "AABBCCDD", "status": "LOCKED"}
+                    )
     finally:
         engine.dispose()
 
@@ -241,8 +253,11 @@ async def test_heartbeat_timeout_closes_4006(tmp_path, monkeypatch):
     engine, factory = _database(tmp_path, monkeypatch)
     with factory.begin() as session:
         device = Device(
-            device_id="CSH-HB", name="Heartbeat", type="cashier",
-            token_hash=hash_device_token(generate_device_token()), status="ACTIVE",
+            device_id="CSH-HB",
+            name="Heartbeat",
+            type="cashier",
+            token_hash=hash_device_token(generate_device_token()),
+            status="ACTIVE",
         )
         session.add(device)
         session.flush()
@@ -274,15 +289,17 @@ async def test_offline_alert_webhook_fired_once(tmp_path, monkeypatch):
     old = datetime.now(UTC) - timedelta(minutes=5)
     with factory.begin() as session:
         device = Device(
-            device_id="CSH-ALERT", name="Alert", type="cashier",
-            token_hash=hash_device_token(generate_device_token()), status="ACTIVE",
-            last_seen_at=old, ws_connected=False,
+            device_id="CSH-ALERT",
+            name="Alert",
+            type="cashier",
+            token_hash=hash_device_token(generate_device_token()),
+            status="ACTIVE",
+            last_seen_at=old,
+            ws_connected=False,
         )
         session.add(device)
         session.flush()
-        session.add(DeviceEvent(
-            device_id=device.id, event="OFFLINE", at=old, duration_s=None
-        ))
+        session.add(DeviceEvent(device_id=device.id, event="OFFLINE", at=old, duration_s=None))
     monkeypatch.setattr(get_settings(), "alert_webhook_url", "https://alerts.example/hook")
     calls = []
 

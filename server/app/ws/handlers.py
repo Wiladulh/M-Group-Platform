@@ -62,8 +62,13 @@ async def ws_device_endpoint(websocket: WebSocket) -> None:
         await websocket.send_text(
             EnvelopeEnvelope.build(
                 "hello_ok",
-                {"device_id": hello.device_id, "server_time_utc": _utc_iso(),
-                 "ping_interval_s": 10, "pong_timeout_s": 25, "idle_disconnect_s": 30},
+                {
+                    "device_id": hello.device_id,
+                    "server_time_utc": _utc_iso(),
+                    "ping_interval_s": 10,
+                    "pong_timeout_s": 25,
+                    "idle_disconnect_s": 30,
+                },
                 message_id=message.id,
             ).model_dump_json()
         )

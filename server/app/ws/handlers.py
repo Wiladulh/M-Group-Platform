@@ -87,8 +87,11 @@ async def ws_device_endpoint(websocket: WebSocket) -> None:
             if pending_bind is not None:
                 member = session.get(Member, pending_bind.member_id)
                 if member is not None:
+                    expires_at = pending_bind.expires_at
+                    if expires_at.tzinfo is None:
+                        expires_at = expires_at.replace(tzinfo=UTC)
                     timeout_s = max(
-                        1, int((pending_bind.expires_at - datetime.now(UTC)).total_seconds())
+                        1, int((expires_at - datetime.now(UTC)).total_seconds())
                     )
                     asyncio.create_task(
                         send_bind_start(

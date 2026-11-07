@@ -8,8 +8,8 @@ from sqlalchemy.orm import Session
 
 from app.db import SessionLocal
 from app.models import Card, Device, Member, OfflineAllowance, Transaction
-from app.services.events import CacheUpdateEvent
 from app.services.cache_version import bump_member_cache_version
+from app.services.events import CacheUpdateEvent
 from app.services.ledger import InsufficientBalance
 from app.services.settings import get_setting
 
@@ -173,12 +173,8 @@ class AllowanceService:
                 row.amount = amount
                 row.computed_at = now
                 row.version += 1
-        cache_version = bump_member_cache_version(self.session)
-        for allowance_row in self.session.scalars(
-            select(OfflineAllowance).where(OfflineAllowance.member_id == member_id)
-        ).all():
-            allowance_row.version = cache_version
         self.session.flush()
+        bump_member_cache_version(self.session, member_id)
 
         cards = self.session.scalars(
             select(Card).where(Card.member_id == member_id, Card.status == "ACTIVE")

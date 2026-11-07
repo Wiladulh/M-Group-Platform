@@ -111,3 +111,13 @@
 ## P7–P9 enum alignment
 - transactions.source must remain ONLINE|OFFLINE_SYNC|ADMIN per Section 5. Cashier topup is distinguished by topup_requests.source=CASHIER, not by transactions.source. Admin/WebUI topup uses topup_requests.source=WEBUI. The ADMIN/CASHIER source additions in migrations 0002/0003 are corrected by migration 0004.
 - Migration 0004 uses no persistent helper table. Downgrade is intentionally lossy: all transactions.source=ADMIN rows become CASHIER and all topup_requests.source=WEBUI rows become ADMIN, including rows that were valid before upgrade. This corrective migration is not expected to be downgraded in production; back up the database before any downgrade.
+
+
+## P10 — WebSocket device transport
+- Device events are emitted on authenticated connect/disconnect; an open OFFLINE row is closed on reconnect. Reconnect within 120 seconds is WIFI_RECONNECT, otherwise ONLINE.
+- One active socket per device is enforced in-process; replacement closes the old socket with 4001.
+- WebSocket database operations use short-lived sessions; no ORM session is held for the socket lifetime.
+- Close codes: 4001 replaced; 4002 hello required/invalid; 4003 unauthorized; 4004 bind unsupported before P11; 4005 idle; 4006 heartbeat timeout.
+- Alert webhook JSON is {device,event,since}; delivery is asynchronous, best-effort, and timeout-limited.
+- Heartbeat timing is 10-second ping target, 25-second pong timeout, and 30-second idle disconnect. Offline alert threshold defaults to 120 seconds.
+- P10 defines all protocol type literals; bind.* handlers are deferred to P11.

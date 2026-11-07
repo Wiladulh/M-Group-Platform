@@ -13,6 +13,11 @@ from app.logging import configure_logging
 from app.routers.device import router as device_router
 from app.routers.payments import router as payments_router
 from app.routers.topups import router as topups_router
+from app.services.events import CacheUpdateEvent, CardStatusChangedEvent, CatalogChangedEvent, _bus
+from app.services.offline_monitor import offline_monitor_loop
+from app.ws.broadcast import broadcast_bus
+from app.ws.handlers import ws_device_endpoint
+from app.ws.protocol import EnvelopeEnvelope
 
 settings = get_settings()
 configure_logging()
@@ -21,11 +26,21 @@ configure_logging()
 @asynccontextmanager
 async def lifespan(application: FastAPI):
     """Hold a database connection for the application lifespan."""
+    import asyncio
+
     connection = engine.connect()
     application.state.database_connection = connection
+    await broadcast_bus.start()
+    monitor = asyncio.create_task(offline_monitor_loop(application))
     try:
         yield
     finally:
+        monitor.cancel()
+        try:
+            await monitor
+        except asyncio.CancelledError:
+            pass
+        await broadcast_bus.stop()
         connection.close()
         engine.dispose()
 
@@ -95,6 +110,31 @@ def healthz() -> dict[str, str]:
     """Return the minimal public health status."""
     return {"status": "ok"}
 
+
+@app.websocket("/ws/device")
+async def ws_device(websocket):
+    await ws_device_endpoint(websocket)
+
+
+def _broadcast_domain_event(event):
+    if isinstance(event, CacheUpdateEvent):
+        for uid in event.uid_list:
+            broadcast_bus.enqueue(EnvelopeEnvelope.build("cache.update", {
+                "uid": uid, "balance_snapshot": event.balance_snapshot,
+                "offline_allowance": max(event.offline_allowance.values(), default=0),
+                "card_status": event.card_status,
+            }))
+    elif isinstance(event, CardStatusChangedEvent):
+        broadcast_bus.enqueue(EnvelopeEnvelope.build("card.status_changed", {
+            "uid": event.uid, "status": event.status,
+        }))
+    elif isinstance(event, CatalogChangedEvent):
+        broadcast_bus.enqueue(EnvelopeEnvelope.build("catalog.changed", {"version": event.version}))
+
+
+_bus.subscribe(CacheUpdateEvent, _broadcast_domain_event)
+_bus.subscribe(CardStatusChangedEvent, _broadcast_domain_event)
+_bus.subscribe(CatalogChangedEvent, _broadcast_domain_event)
 
 app.include_router(device_router)
 app.include_router(payments_router)

@@ -27,6 +27,21 @@ class CacheUpdateEvent(DomainEvent):
     computed_at_utc: str
 
 
+@dataclass(frozen=True, slots=True)
+class CardStatusChangedEvent(DomainEvent):
+    """A card status transition propagated to device caches."""
+
+    uid: str
+    status: str
+
+
+@dataclass(frozen=True, slots=True)
+class CatalogChangedEvent(DomainEvent):
+    """A committed catalog version change."""
+
+    version: int
+
+
 class EventBus:
     """Simple in-process event dispatcher."""
 

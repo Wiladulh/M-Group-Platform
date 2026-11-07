@@ -20,3 +20,8 @@ Each active offline-capable device caches up to 100 members. The first positions
 For a member, N is the number of offline-capable device caches that include that member. Each included device receives `min(offline_card_cap, floor(member.balance / N))`. This keeps the sum of allowances at or below the member's balance.
 
 In `offline_hold_mode=soft`, online payments may spend the full balance. In `hard`, the spendable online balance is `member.balance - sum(offline_allowances.amount)`; PaymentService checks this before every online debit, and admin top-up reversal checks it before its debit.
+
+
+## WebSocket layer (P10)
+
+The authenticated device transport is mounted at `/ws/device`, separately from REST routers. The device sends its token inside the first hello envelope. The connection manager enforces one socket per device and persists online/offline state and device events. Each database operation uses a short-lived SessionLocal session; no SQLAlchemy session is held for the socket lifetime. Committed domain events are bridged to an asyncio queue and broadcast to connected devices. Heartbeat defaults are 10-second ping target, 25-second pong timeout, and 30-second idle disconnect. Offline alerts are best-effort and controlled by ALERT_WEBHOOK_URL.

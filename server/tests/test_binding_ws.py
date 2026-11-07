@@ -4,11 +4,10 @@ import asyncio
 from datetime import UTC, datetime
 
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import select
-
 from app.main import app
 from app.models import Card, CardBindSession, Member, OfflineAllowance
+from fastapi.testclient import TestClient
+from sqlalchemy import select
 from tests.test_binding import _add_card, _add_member, _create_session, _database
 
 

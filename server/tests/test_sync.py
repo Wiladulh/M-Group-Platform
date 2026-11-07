@@ -1,6 +1,7 @@
 """Offline sync service regression tests, including rejected ledger rows."""
 
 import json
+from types import SimpleNamespace
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -41,7 +42,6 @@ def sync_db(tmp_path):
         session.add(member)
         session.flush()
         member_id = member.id
-        LedgerService(session). _credit_internal if False else None
     with factory() as session:
         LedgerService(session).credit(
             member_id, 10_000, txn_uuid="sync-opening-balance",
@@ -89,7 +89,7 @@ def _batch(txn_uuid="offline-txn-1", *, price=5_000, offline_ts=None,
 def test_sync_single_offline_payment_accepted(sync_db):
     _, factory, device_id, member_id, _ = sync_db
     with factory() as session:
-        device = session.get(Device, device_id)
+        device = SimpleNamespace(id=device_id, device_id="CSH-001", type="cashier")
         result = SyncService(session).process_batch(device, _batch())
         assert result.accepted == 1
         assert result.rejected == 0
@@ -107,7 +107,11 @@ def test_sync_single_offline_payment_accepted(sync_db):
 def test_sync_insufficient_creates_shortfall(sync_db, monkeypatch):
     _, factory, device_id, member_id, _ = sync_db
     with factory.begin() as session:
-        session.get(Member, member_id).balance = 5_000
+        LedgerService(session).debit(
+            member_id, 5_000, txn_uuid="sync-pretest-debit",
+            card_id=None, device_id=None, type="PAYMENT", source="ONLINE",
+            performed_by_type="DEVICE", performed_by_id="TEST",
+        )
     with factory() as session:
         device = session.get(Device, device_id)
         response = SyncService(session).process_batch(
@@ -133,8 +137,26 @@ def test_sync_insufficient_creates_shortfall(sync_db, monkeypatch):
     assert cli.verify_ledger() == 0
 
 
-def test_sync_rejected_txn_row_created(sync_db, monkeypatch):
-    test_sync_insufficient_creates_shortfall(sync_db, monkeypatch)
+def test_sync_rejected_txn_row_created(sync_db):
+    _, factory, device_id, member_id, _ = sync_db
+    with factory() as session:
+        LedgerService(session).debit(
+            member_id, 5_000, txn_uuid="rejected-seed-debit",
+            card_id=None, device_id=None, type="PAYMENT", source="ONLINE",
+            performed_by_type="DEVICE", performed_by_id="TEST",
+        )
+    with factory() as session:
+        device = SimpleNamespace(id=device_id, device_id="CSH-001", type="cashier")
+        SyncService(session).process_batch(device, _batch(price=8_000, txn_uuid="rejected-row"))
+    with factory() as session:
+        row = session.scalar(select(Transaction).where(Transaction.txn_uuid == "rejected-row"))
+        shortfall = session.scalar(select(ShortfallRecord).where(ShortfallRecord.txn_uuid == "rejected-row"))
+        assert row.status == "REJECTED"
+        assert row.reject_reason == "INSUFFICIENT_AT_SYNC"
+        assert row.balance_before == row.balance_after == 5_000
+        assert row.amount == 8_000
+        assert shortfall is not None
+        assert session.get(Member, member_id).balance == 5_000
 
 
 def test_sync_unknown_card_no_shortfall(sync_db):

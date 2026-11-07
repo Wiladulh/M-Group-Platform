@@ -17,6 +17,7 @@ from app.schemas.payment import (
 from app.security.device_auth import DeviceAuthInfo
 from app.security.pins import verify_pin
 from app.services.allowance import assert_can_spend_online
+from app.services.cache_version import bump_member_cache_version
 from app.services.ledger import IdempotencyConflict, InsufficientBalance, LedgerService
 
 logger = logging.getLogger(__name__)
@@ -65,6 +66,7 @@ def _check_pin(session: Session, card_id: int, pin: str, pin_hash: str) -> None:
         card.pin_fail_count += 1
         if card.pin_fail_count >= 3:
             card.status = "LOCKED"
+            bump_member_cache_version(session)
             locked = True
         else:
             attempts_left = max(0, 3 - card.pin_fail_count)

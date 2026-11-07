@@ -40,7 +40,7 @@ def _items_json(item: SyncItem, product_name: str | None = None) -> str | None:
     return json.dumps(data, separators=(",", ":"), ensure_ascii=False)
 
 
-def _payload_identical(row: Transaction, item: SyncItem, device_id: int,
+def _payload_identical(row: Transaction, item: SyncItem, device: Device,
                        member_id: int, card_id: int, items_json: str | None) -> bool:
     occurred = _utc_from_epoch(item.offline_ts)
     stored = row.occurred_at
@@ -49,7 +49,7 @@ def _payload_identical(row: Transaction, item: SyncItem, device_id: int,
     return (
         row.member_id == member_id
         and row.card_id == card_id
-        and row.device_id == device_id
+        and row.device_id == device.id
         and row.type == "PAYMENT"
         and row.amount == item.price
         and row.direction == "DEBIT"
@@ -57,7 +57,7 @@ def _payload_identical(row: Transaction, item: SyncItem, device_id: int,
         and row.items_json == items_json
         and stored == occurred
         and row.performed_by_type == "DEVICE"
-        and row.performed_by_id is not None
+        and row.performed_by_id == device.device_id
     )
 
 
@@ -136,7 +136,7 @@ class SyncService:
                 product_name = product.name if product else None
             payload_json = _items_json(item, product_name)
             if member is not None and card is not None and _payload_identical(
-                existing, item, device.id, member.id, card.id, payload_json
+                existing, item, device, member.id, card.id, payload_json
             ):
                 return SyncItemResult(
                     txn_uuid=item.txn_uuid, status="DUPLICATE",
@@ -303,13 +303,11 @@ class SyncService:
             results_by_uuid: dict[str, tuple[SyncItemResult, int | None]] = {}
             affected_members: set[int] = set()
             for item in sorted(batch.items, key=lambda entry: entry.offline_ts):
-                # A savepoint ensures a failed item cannot poison subsequent items.
-                with self.session.begin_nested():
-                    result, member_id = self._process_item(device, item)
-                    results_by_uuid[item.txn_uuid] = (result, member_id)
-                    if member_id is not None:
-                        affected_members.add(member_id)
-                    self.session.flush()
+                result, member_id = self._process_item(device, item)
+                results_by_uuid[item.txn_uuid] = (result, member_id)
+                if member_id is not None:
+                    affected_members.add(member_id)
+                self.session.flush()
 
             for member_id in sorted(affected_members):
                 AllowanceService(self.session).apply_allowances(member_id)
@@ -322,7 +320,10 @@ class SyncService:
             log_row.accepted = accepted
             log_row.rejected = rejected
             log_row.detail_json = json.dumps(
-                {"results": [result.model_dump() for result in ordered_results]},
+                {
+                    "results": [result.model_dump() for result in ordered_results],
+                    "items": [item.model_dump() for item in batch.items],
+                },
                 separators=(",", ":"),
             )
             self.session.flush()

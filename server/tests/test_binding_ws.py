@@ -4,11 +4,10 @@ import asyncio
 from datetime import UTC, datetime
 
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import select
-
 from app.main import app
 from app.models import Card, CardBindSession, Member, OfflineAllowance
+from fastapi.testclient import TestClient
+from sqlalchemy import select
 from tests.test_binding import _add_card, _add_member, _create_session, _database
 
 
@@ -92,38 +91,37 @@ async def test_replace_card_via_websocket_e2e(tmp_path, monkeypatch):
         )
     session_uuid = _create_session(factory, member_id, device_id, "REPLACE_CARD")
     try:
-        with TestClient(app) as client:
-            with client.websocket_connect("/ws/device") as ws:
-                await _connect_and_start(ws, token, session_uuid, "REPLACE_CARD")
-                _send_scan(ws, session_uuid, "11223344")
-                ws.send_json(
-                    {"v": 1, "id": "scan-barrier", "type": "ping", "ts": 4, "data": {}}
-                )
-                assert (await _receive_json(ws))["type"] == "pong"
-                with factory() as session:
-                    bind = session.scalar(
-                        select(CardBindSession).where(
-                            CardBindSession.session_uuid == session_uuid
-                        )
+        with TestClient(app) as client, client.websocket_connect("/ws/device") as ws:
+            await _connect_and_start(ws, token, session_uuid, "REPLACE_CARD")
+            _send_scan(ws, session_uuid, "11223344")
+            ws.send_json(
+                {"v": 1, "id": "scan-barrier", "type": "ping", "ts": 4, "data": {}}
+            )
+            assert (await _receive_json(ws))["type"] == "pong"
+            with factory() as session:
+                bind = session.scalar(
+                    select(CardBindSession).where(
+                        CardBindSession.session_uuid == session_uuid
                     )
-                    assert bind.state == "WAITING_PIN"
+                )
+                assert bind.state == "WAITING_PIN"
 
-                _send_pin(ws, session_uuid, "4610")
-                received = set()
-                for sequence in range(5, 12):
-                    message = await _receive_json(ws)
-                    message_type = message["type"]
-                    if message_type == "bind.done":
-                        assert message["data"]["uid_masked"] == "••••3344"
-                        assert message["data"]["status"] == "ACTIVE"
-                        _ack(ws, message, sequence)
-                    if message_type == "card.status_changed":
-                        assert message["data"]["uid"] == "11223344"
-                        assert message["data"]["status"] == "ACTIVE"
-                    received.add(message_type)
-                    if {"bind.done", "card.status_changed"} <= received:
-                        break
-                assert {"bind.done", "card.status_changed"} <= received
+            _send_pin(ws, session_uuid, "4610")
+            received = set()
+            for sequence in range(5, 12):
+                message = await _receive_json(ws)
+                message_type = message["type"]
+                if message_type == "bind.done":
+                    assert message["data"]["uid_masked"] == "••••3344"
+                    assert message["data"]["status"] == "ACTIVE"
+                    _ack(ws, message, sequence)
+                if message_type == "card.status_changed":
+                    assert message["data"]["uid"] == "11223344"
+                    assert message["data"]["status"] == "ACTIVE"
+                received.add(message_type)
+                if {"bind.done", "card.status_changed"} <= received:
+                    break
+            assert {"bind.done", "card.status_changed"} <= received
 
         with factory() as session:
             old_card = session.get(Card, old_card_id)
@@ -157,21 +155,20 @@ async def test_pin_only_via_websocket_e2e(tmp_path, monkeypatch):
         session.get(Card, card_id).offline_verifier = old_verifier
     session_uuid = _create_session(factory, member_id, device_id, "PIN_ONLY")
     try:
-        with TestClient(app) as client:
-            with client.websocket_connect("/ws/device") as ws:
-                await _connect_and_start(ws, token, session_uuid, "PIN_ONLY")
-                _send_scan(ws, session_uuid, "AABBCCDD")
-                _send_pin(ws, session_uuid, "8472")
-                done = None
-                for sequence in range(5, 9):
-                    message = await _receive_json(ws)
-                    if message["type"] == "bind.done":
-                        done = message
-                        assert done["data"]["uid_masked"] == "••••CCDD"
-                        assert done["data"]["status"] == "ACTIVE"
-                        _ack(ws, done, sequence)
-                        break
-                assert done is not None
+        with TestClient(app) as client, client.websocket_connect("/ws/device") as ws:
+            await _connect_and_start(ws, token, session_uuid, "PIN_ONLY")
+            _send_scan(ws, session_uuid, "AABBCCDD")
+            _send_pin(ws, session_uuid, "8472")
+            done = None
+            for sequence in range(5, 9):
+                message = await _receive_json(ws)
+                if message["type"] == "bind.done":
+                    done = message
+                    assert done["data"]["uid_masked"] == "••••CCDD"
+                    assert done["data"]["status"] == "ACTIVE"
+                    _ack(ws, done, sequence)
+                    break
+            assert done is not None
 
         with factory() as session:
             card = session.get(Card, card_id)
@@ -198,15 +195,14 @@ async def test_replace_card_via_websocket_uid_conflict(tmp_path, monkeypatch):
     _add_card(factory, other_member_id, uid="11223344")
     session_uuid = _create_session(factory, member_id, device_id, "REPLACE_CARD")
     try:
-        with TestClient(app) as client:
-            with client.websocket_connect("/ws/device") as ws:
-                await _connect_and_start(ws, token, session_uuid, "REPLACE_CARD")
-                _send_scan(ws, session_uuid, "11223344")
-                error = await _receive_json(ws)
-                assert error["type"] == "bind.error"
-                assert error["data"]["code"] == "BIND_CONFLICT"
-                assert error["data"]["message"] == "Kartu sudah terdaftar pada member lain"
-                _ack(ws, error, 5)
+        with TestClient(app) as client, client.websocket_connect("/ws/device") as ws:
+            await _connect_and_start(ws, token, session_uuid, "REPLACE_CARD")
+            _send_scan(ws, session_uuid, "11223344")
+            error = await _receive_json(ws)
+            assert error["type"] == "bind.error"
+            assert error["data"]["code"] == "BIND_CONFLICT"
+            assert error["data"]["message"] == "Kartu sudah terdaftar pada member lain"
+            _ack(ws, error, 5)
         with factory() as session:
             bind = session.scalar(
                 select(CardBindSession).where(CardBindSession.session_uuid == session_uuid)
@@ -223,14 +219,13 @@ async def test_pin_only_via_websocket_unknown_uid(tmp_path, monkeypatch):
     )
     session_uuid = _create_session(factory, _member_id, device_id, "PIN_ONLY")
     try:
-        with TestClient(app) as client:
-            with client.websocket_connect("/ws/device") as ws:
-                await _connect_and_start(ws, token, session_uuid, "PIN_ONLY")
-                _send_scan(ws, session_uuid, "11223344")
-                error = await _receive_json(ws)
-                assert error["type"] == "bind.error"
-                assert error["data"]["code"] == "CARD_UNKNOWN"
-                _ack(ws, error, 5)
+        with TestClient(app) as client, client.websocket_connect("/ws/device") as ws:
+            await _connect_and_start(ws, token, session_uuid, "PIN_ONLY")
+            _send_scan(ws, session_uuid, "11223344")
+            error = await _receive_json(ws)
+            assert error["type"] == "bind.error"
+            assert error["data"]["code"] == "CARD_UNKNOWN"
+            _ack(ws, error, 5)
     finally:
         engine.dispose()
 
@@ -244,14 +239,13 @@ async def test_pin_only_via_websocket_wrong_member(tmp_path, monkeypatch):
     _add_card(factory, other_member_id, uid="AABBCCDD")
     session_uuid = _create_session(factory, member_id, device_id, "PIN_ONLY")
     try:
-        with TestClient(app) as client:
-            with client.websocket_connect("/ws/device") as ws:
-                await _connect_and_start(ws, token, session_uuid, "PIN_ONLY")
-                _send_scan(ws, session_uuid, "AABBCCDD")
-                error = await _receive_json(ws)
-                assert error["type"] == "bind.error"
-                assert error["data"]["code"] == "BIND_CONFLICT"
-                assert error["data"]["message"] == "Kartu sudah terdaftar pada member lain"
-                _ack(ws, error, 5)
+        with TestClient(app) as client, client.websocket_connect("/ws/device") as ws:
+            await _connect_and_start(ws, token, session_uuid, "PIN_ONLY")
+            _send_scan(ws, session_uuid, "AABBCCDD")
+            error = await _receive_json(ws)
+            assert error["type"] == "bind.error"
+            assert error["data"]["code"] == "BIND_CONFLICT"
+            assert error["data"]["message"] == "Kartu sudah terdaftar pada member lain"
+            _ack(ws, error, 5)
     finally:
         engine.dispose()

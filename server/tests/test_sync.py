@@ -5,17 +5,22 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 
 import pytest
-from sqlalchemy import create_engine, event, select
-from sqlalchemy.orm import sessionmaker
-
 from app.models import (
-    Base, Card, Device, Member, OfflineAllowance, PendingSyncLog,
-    ShortfallRecord, Transaction,
+    Base,
+    Card,
+    Device,
+    Member,
+    OfflineAllowance,
+    PendingSyncLog,
+    ShortfallRecord,
+    Transaction,
 )
 from app.schemas.sync import SyncBatch, SyncItem
 from app.security.pins import hash_pin
 from app.services.ledger import LedgerService
 from app.services.sync import SyncService
+from sqlalchemy import create_engine, event, select
+from sqlalchemy.orm import sessionmaker
 
 
 @pytest.fixture

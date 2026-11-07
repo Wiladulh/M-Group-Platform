@@ -130,12 +130,12 @@ def _broadcast_domain_event(event):
             )
     elif isinstance(event, CardStatusChangedEvent):
         broadcast_bus.enqueue(
-            EnvelopeEnvelope.build("card.status_changed", {"uid": event.uid, "status": event.status})
+            EnvelopeEnvelope.build(
+                "card.status_changed", {"uid": event.uid, "status": event.status}
+            )
         )
     elif isinstance(event, CatalogChangedEvent):
-        broadcast_bus.enqueue(
-            EnvelopeEnvelope.build("catalog.changed", {"version": event.version})
-        )
+        broadcast_bus.enqueue(EnvelopeEnvelope.build("catalog.changed", {"version": event.version}))
 
 
 _bus.subscribe(CacheUpdateEvent, _broadcast_domain_event)

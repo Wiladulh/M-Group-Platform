@@ -518,7 +518,6 @@ def test_device_cancel_over_real_websocket(tmp_path, monkeypatch):
         engine.dispose()
 
 
-
 @pytest.mark.asyncio
 async def test_bind_expiry_loop_uses_five_second_interval(monkeypatch):
     from app.services import bind_expiry as expiry_module

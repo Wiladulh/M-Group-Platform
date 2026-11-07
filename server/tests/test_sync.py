@@ -1,6 +1,8 @@
 """Offline sync service regression tests, including rejected ledger rows."""
 
 import json
+
+import pytest
 from datetime import UTC, datetime
 from types import SimpleNamespace
 
@@ -302,3 +304,124 @@ def test_sync_clock_skew_offline(sync_db):
         assert session.get(Member, member_id).balance == 10_000
         row = session.scalar(select(Transaction).where(Transaction.txn_uuid == "offline-txn-1"))
         assert row.status == "REJECTED"
+
+
+def test_sync_batch_of_5_mixed(sync_db):
+    _, factory, device_id, member_id, _ = sync_db
+    now = int(datetime.now(UTC).timestamp()) - 5
+    batch = SyncBatch(batch_uuid="mixed-five", items=[
+        SyncItem(txn_uuid="mix-1", uid="A1B2C3D4", price=1_000, offline_ts=now),
+        SyncItem(txn_uuid="mix-2", uid="A1B2C3D4", price=2_000, offline_ts=now + 1),
+        SyncItem(txn_uuid="mix-3", uid="A1B2C3D4", price=3_000, offline_ts=now + 2),
+        SyncItem(txn_uuid="mix-4", uid="A1B2C3D4", price=20_000, offline_ts=now + 3),
+        SyncItem(txn_uuid="mix-5", uid="FFFFFFFF", price=1_000, offline_ts=now + 4),
+    ])
+    with factory() as session:
+        device = SimpleNamespace(id=device_id, device_id="CSH-001", type="cashier")
+        response = SyncService(session).process_batch(device, batch)
+        assert (response.accepted, response.rejected, response.total) == (3, 2, 5)
+    with factory() as session:
+        assert session.get(Member, member_id).balance == 4_000
+        log = session.scalar(select(PendingSyncLog).where(PendingSyncLog.batch_uuid == "mixed-five"))
+        assert (log.total, log.accepted, log.rejected) == (5, 3, 2)
+
+
+def test_verify_ledger_ignores_rejected(sync_db, monkeypatch):
+    _, factory, _device_id, member_id, card_id = sync_db
+    with factory.begin() as session:
+        session.add(Transaction(
+            txn_uuid="rejected-ledger-ignore",
+            member_id=member_id,
+            card_id=card_id,
+            type="PAYMENT",
+            amount=8_000,
+            direction="DEBIT",
+            balance_before=10_000,
+            balance_after=10_000,
+            status="REJECTED",
+            reject_reason="INSUFFICIENT_AT_SYNC",
+            source="OFFLINE_SYNC",
+            occurred_at=datetime.now(UTC),
+            performed_by_type="DEVICE",
+            performed_by_id="CSH-001",
+        ))
+    from app import cli
+    monkeypatch.setattr(cli, "SessionLocal", factory)
+    assert cli.verify_ledger() == 0
+
+
+def test_sync_card_inactive_at_sync_flag(sync_db):
+    _, factory, device_id, _member_id, card_id = sync_db
+    with factory.begin() as session:
+        session.get(Card, card_id).status = "INACTIVE"
+    with factory() as session:
+        device = SimpleNamespace(id=device_id, device_id="CSH-001", type="cashier")
+        SyncService(session).process_batch(
+            device, _batch(txn_uuid="inactive-card-txn")
+        )
+    with factory() as session:
+        txn = session.scalar(select(Transaction).where(
+            Transaction.txn_uuid == "inactive-card-txn"
+        ))
+        assert txn.card_inactive_at_sync is True
+        assert txn.status == "COMPLETED"
+
+
+def test_sync_dispense_unknown_leaves_pending(sync_db):
+    _, factory, device_id, _member_id, _ = sync_db
+    with factory.begin() as session:
+        vending = Device(
+            device_id="VND-001", name="Vending 001", type="vending",
+            token_hash="v" * 64, status="ACTIVE", slot_count=5,
+            config_json='{"offline_enabled":true}',
+        )
+        session.add(vending)
+        session.flush()
+        vending_id = vending.id
+    with factory() as session:
+        device = SimpleNamespace(id=vending_id, device_id="VND-001", type="vending")
+        SyncService(session).process_batch(
+            device, _batch(txn_uuid="pending-dispense-txn", dispense_result="unknown")
+        )
+    with factory() as session:
+        txn = session.scalar(select(Transaction).where(
+            Transaction.txn_uuid == "pending-dispense-txn"
+        ))
+        assert txn.status == "PENDING_DISPENSE"
+
+
+def test_sync_member_suspended_creates_rejected_row(sync_db):
+    _, factory, device_id, member_id, _ = sync_db
+    with factory.begin() as session:
+        session.get(Member, member_id).status = "SUSPENDED"
+    with factory() as session:
+        device = SimpleNamespace(id=device_id, device_id="CSH-001", type="cashier")
+        response = SyncService(session).process_batch(
+            device, _batch(txn_uuid="suspended-member-txn")
+        )
+        assert response.results[0].reason == "MEMBER_SUSPENDED"
+    with factory() as session:
+        row = session.scalar(select(Transaction).where(
+            Transaction.txn_uuid == "suspended-member-txn"
+        ))
+        assert row.status == "REJECTED"
+        assert row.reject_reason == "MEMBER_SUSPENDED"
+        assert row.balance_before == row.balance_after == 10_000
+
+
+def test_batch_size_limit():
+    from pydantic import ValidationError
+    items = [
+        SyncItem(
+            txn_uuid=f"batch-limit-{index}", uid="A1B2C3D4",
+            price=100, offline_ts=1,
+        )
+        for index in range(51)
+    ]
+    with pytest.raises(ValidationError):
+        SyncBatch(batch_uuid="too-many", items=items)
+
+
+def test_sync_requires_device_auth(client):
+    response = client.get("/api/v1/device/member-cache?since=0")
+    assert response.status_code == 401

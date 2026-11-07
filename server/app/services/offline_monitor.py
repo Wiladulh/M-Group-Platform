@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from contextlib import suppress
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
@@ -23,10 +24,8 @@ async def offline_monitor_loop(app) -> None:
             if not heartbeat.is_alive(device_pk):
                 ws = manager._connections.get(device_pk)
                 if ws is not None:
-                    try:
+                    with suppress(Exception):
                         await ws.close(code=4006, reason="heartbeat_timeout")
-                    except Exception:
-                        pass
                 with SessionLocal() as session:
                     device = session.get(Device, device_pk)
                     if device is not None:

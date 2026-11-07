@@ -178,11 +178,13 @@ async def ws_device_endpoint(websocket: WebSocket) -> None:
                     except DomainError as exc:
                         error = exc
                 if error is not None:
-                    await send_bind_error(
-                        device_pk,
-                        session_uuid,
-                        getattr(error, "code", "VALIDATION_ERROR"),
-                        str(error),
+                    asyncio.create_task(
+                        send_bind_error(
+                            device_pk,
+                            session_uuid,
+                            getattr(error, "code", "VALIDATION_ERROR"),
+                            str(error),
+                        )
                     )
                 elif result is not None and result.state == "DONE":
                     asyncio.create_task(

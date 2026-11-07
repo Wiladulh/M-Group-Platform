@@ -11,10 +11,10 @@ from sqlalchemy import select
 
 from app import db
 from app.errors import DomainError
-from app.models import Device
+from app.models import CardBindSession, Device, Member
 from app.security.device_token import verify_device_token
 from app.services.binding import BindingService
-from app.ws.commands import send_bind_cancel, send_bind_done, send_bind_error
+from app.ws.commands import send_bind_cancel, send_bind_done, send_bind_error, send_bind_start
 from app.ws.connection_manager import manager
 from app.ws.heartbeat import heartbeat
 from app.ws.protocol import EnvelopeEnvelope, HelloData
@@ -75,6 +75,30 @@ async def ws_device_endpoint(websocket: WebSocket) -> None:
                 message_id=message.id,
             ).model_dump_json()
         )
+        with db.SessionLocal() as session:
+            pending_bind = session.scalar(
+                select(CardBindSession)
+                .where(
+                    CardBindSession.device_id == device_pk,
+                    CardBindSession.state.in_(("WAITING_DEVICE", "WAITING_CARD")),
+                )
+                .order_by(CardBindSession.created_at.asc())
+            )
+            if pending_bind is not None:
+                member = session.get(Member, pending_bind.member_id)
+                if member is not None:
+                    timeout_s = max(
+                        1, int((pending_bind.expires_at - datetime.now(UTC)).total_seconds())
+                    )
+                    asyncio.create_task(
+                        send_bind_start(
+                            device_pk,
+                            pending_bind.session_uuid,
+                            member.full_name,
+                            pending_bind.mode,
+                            timeout_s,
+                        )
+                    )
         while True:
             try:
                 raw = await asyncio.wait_for(websocket.receive_text(), timeout=IDLE_DISCONNECT_S)
@@ -132,11 +156,13 @@ async def ws_device_endpoint(websocket: WebSocket) -> None:
                     except (DomainError, ValueError, TypeError) as exc:
                         error = exc
                 if error is not None:
-                    await send_bind_error(
-                        device_pk,
-                        session_uuid,
-                        getattr(error, "code", "VALIDATION_ERROR"),
-                        str(error),
+                    asyncio.create_task(
+                        send_bind_error(
+                            device_pk,
+                            session_uuid,
+                            getattr(error, "code", "VALIDATION_ERROR"),
+                            str(error),
+                        )
                     )
             elif incoming.type == "bind.pin_submitted":
                 session_uuid = str(incoming.data.get("session_uuid", ""))
@@ -159,8 +185,10 @@ async def ws_device_endpoint(websocket: WebSocket) -> None:
                         str(error),
                     )
                 elif result is not None and result.state == "DONE":
-                    await send_bind_done(
-                        device_pk, session_uuid, result.uid_scanned or "", "ACTIVE"
+                    asyncio.create_task(
+                        send_bind_done(
+                            device_pk, session_uuid, result.uid_scanned or "", "ACTIVE"
+                        )
                     )
             elif incoming.type == "bind.cancel":
                 session_uuid = str(incoming.data.get("session_uuid", ""))
@@ -172,14 +200,16 @@ async def ws_device_endpoint(websocket: WebSocket) -> None:
                     except DomainError as exc:
                         error = exc
                 if error is not None:
-                    await send_bind_error(
-                        device_pk,
-                        session_uuid,
-                        getattr(error, "code", "BIND_FAILED"),
-                        str(error),
+                    asyncio.create_task(
+                        send_bind_error(
+                            device_pk,
+                            session_uuid,
+                            getattr(error, "code", "BIND_FAILED"),
+                            str(error),
+                        )
                     )
                 else:
-                    await send_bind_cancel(device_pk, session_uuid, reason)
+                    asyncio.create_task(send_bind_cancel(device_pk, session_uuid, reason))
             elif incoming.type.startswith("bind."):
                 logger.warning(
                     "unknown_bind_message device_id=%s type=%s",

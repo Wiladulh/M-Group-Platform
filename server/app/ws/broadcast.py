@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from contextlib import suppress
 
 from app.ws.connection_manager import manager
 from app.ws.protocol import EnvelopeEnvelope
@@ -23,10 +24,8 @@ class BroadcastBus:
     async def stop(self) -> None:
         if self._task is not None:
             self._task.cancel()
-            try:
+            with suppress(asyncio.CancelledError):
                 await self._task
-            except asyncio.CancelledError:
-                pass
             self._task = None
         self._loop = None
 

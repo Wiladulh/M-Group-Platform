@@ -95,15 +95,11 @@ async def test_replace_card_via_websocket_e2e(tmp_path, monkeypatch):
         with TestClient(app) as client, client.websocket_connect("/ws/device") as ws:
             await _connect_and_start(ws, token, session_uuid, "REPLACE_CARD")
             _send_scan(ws, session_uuid, "11223344")
-            ws.send_json(
-                {"v": 1, "id": "scan-barrier", "type": "ping", "ts": 4, "data": {}}
-            )
+            ws.send_json({"v": 1, "id": "scan-barrier", "type": "ping", "ts": 4, "data": {}})
             assert (await _receive_json(ws))["type"] == "pong"
             with factory() as session:
                 bind = session.scalar(
-                    select(CardBindSession).where(
-                        CardBindSession.session_uuid == session_uuid
-                    )
+                    select(CardBindSession).where(CardBindSession.session_uuid == session_uuid)
                 )
                 assert bind.state == "WAITING_PIN"
 
@@ -134,12 +130,15 @@ async def test_replace_card_via_websocket_e2e(tmp_path, monkeypatch):
             assert new_card.status == "ACTIVE"
             assert new_card.member_id == member_id
             assert session.get(Member, member_id).balance == 10_000
-            assert session.scalars(
-                select(OfflineAllowance).where(
-                    OfflineAllowance.member_id == member_id,
-                    OfflineAllowance.device_id == device_id,
-                )
-            ).all() == []
+            assert (
+                session.scalars(
+                    select(OfflineAllowance).where(
+                        OfflineAllowance.member_id == member_id,
+                        OfflineAllowance.device_id == device_id,
+                    )
+                ).all()
+                == []
+            )
             assert bind.state == "DONE"
     finally:
         engine.dispose()

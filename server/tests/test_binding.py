@@ -19,8 +19,8 @@ from app.models import (
 )
 from app.security.device_token import generate_device_token, hash_device_token
 from app.security.passwords import hash_password
-from app.services.binding import BindingService
 from app.services.bind_expiry import bind_expiry_once
+from app.services.binding import BindingService
 from app.services.events import (
     CacheInvalidateEvent,
     CacheUpdateEvent,
@@ -42,7 +42,7 @@ def _database(tmp_path, monkeypatch):
     factory = sessionmaker(bind=engine, expire_on_commit=False)
     monkeypatch.setattr(db, "SessionLocal", factory)
     token = generate_device_token()
-    with factory.begin() as session:
+    with factory.begin() as session:  # noqa: SIM117
         session.add(
             AdminUser(
                 id=1,
@@ -76,23 +76,23 @@ def _database(tmp_path, monkeypatch):
 
 
 def _create_session(factory, member_id, device_id, mode="NEW_CARD"):
-    with factory.begin() as session:
+    with factory.begin() as session:  # noqa: SIM117
         row = BindingService(session).create_session(member_id, device_id, mode, 1)
         return row.session_uuid
 
 
 def _scan(factory, session_uuid, uid):
-    with factory.begin() as session:
+    with factory.begin() as session:  # noqa: SIM117
         return BindingService(session).on_card_scanned(session_uuid, uid, datetime.now(UTC))
 
 
 def _pin(factory, session_uuid, pin="4610", confirm="4610"):
-    with factory.begin() as session:
+    with factory.begin() as session:  # noqa: SIM117
         return BindingService(session).on_pin_submitted(session_uuid, pin, confirm)
 
 
 def _add_member(factory, member_code="MG-A00002", nik_idx="idx-2"):
-    with factory.begin() as session:
+    with factory.begin() as session:  # noqa: SIM117
         member = Member(
             member_code=member_code,
             full_name="Member Two",
@@ -107,7 +107,7 @@ def _add_member(factory, member_code="MG-A00002", nik_idx="idx-2"):
 
 
 def _add_device(factory, device_id="CSH-BIND-2"):
-    with factory.begin() as session:
+    with factory.begin() as session:  # noqa: SIM117
         device = Device(
             device_id=device_id,
             name="Second cashier",
@@ -123,7 +123,7 @@ def _add_device(factory, device_id="CSH-BIND-2"):
 
 
 def _add_card(factory, member_id, uid="AABBCCDD", status="ACTIVE", pin_fail_count=0):
-    with factory.begin() as session:
+    with factory.begin() as session:  # noqa: SIM117
         card = Card(
             member_id=member_id,
             uid=uid,
@@ -157,7 +157,7 @@ def test_create_session_one_per_device_conflict(tmp_path, monkeypatch):
     second_member_id = _add_member(factory)
     try:
         _create_session(factory, member_id, device_id)
-        with factory.begin() as session:
+        with factory.begin() as session:  # noqa: SIM117
             with pytest.raises(DomainError) as exc:
                 BindingService(session).create_session(second_member_id, device_id, "NEW_CARD", 1)
         assert exc.value.code == "BIND_CONFLICT"
@@ -170,7 +170,7 @@ def test_create_session_one_per_member_conflict(tmp_path, monkeypatch):
     second_device_id = _add_device(factory)
     try:
         _create_session(factory, member_id, device_id)
-        with factory.begin() as session:
+        with factory.begin() as session:  # noqa: SIM117
             with pytest.raises(DomainError) as exc:
                 BindingService(session).create_session(member_id, second_device_id, "NEW_CARD", 1)
         assert exc.value.code == "BIND_CONFLICT"
@@ -234,7 +234,7 @@ def test_new_card_uid_conflict_marks_session_failed(tmp_path, monkeypatch):
     _add_card(factory, other_member_id)
     session_uuid = _create_session(factory, member_id, device_id)
     try:
-        with factory.begin() as session:
+        with factory.begin() as session:  # noqa: SIM117
             with pytest.raises(DomainError) as exc:
                 BindingService(session).on_card_scanned(
                     session_uuid, "AABBCCDD", datetime.now(UTC)
@@ -254,7 +254,7 @@ def test_new_card_weak_pin_keeps_confirm_state_for_retry(tmp_path, monkeypatch):
     session_uuid = _create_session(factory, member_id, device_id)
     _scan(factory, session_uuid, "AABBCCDD")
     try:
-        with factory.begin() as session:
+        with factory.begin() as session:  # noqa: SIM117
             with pytest.raises(DomainError) as exc:
                 BindingService(session).on_pin_submitted(session_uuid, "1234", "1234")
         assert exc.value.code == "VALIDATION_ERROR"
@@ -274,7 +274,7 @@ def test_pin_mismatch_three_times_fails_session(tmp_path, monkeypatch):
     _scan(factory, session_uuid, "AABBCCDD")
     try:
         for attempt in range(3):
-            with factory.begin() as session:
+            with factory.begin() as session:  # noqa: SIM117
                 with pytest.raises(DomainError) as exc:
                     BindingService(session).on_pin_submitted(session_uuid, "4610", "9999")
             if attempt == 2:
@@ -293,7 +293,7 @@ def test_pin_mismatch_three_times_fails_session(tmp_path, monkeypatch):
 def test_replace_card_happy_path_is_atomic_and_deletes_allowance(tmp_path, monkeypatch):
     engine, factory, member_id, device_id, _token = _database(tmp_path, monkeypatch)
     old_card_id = _add_card(factory)
-    with factory.begin() as session:
+    with factory.begin() as session:  # noqa: SIM117
         session.add(
             OfflineAllowance(
                 member_id=member_id,
@@ -347,7 +347,7 @@ def test_pin_only_wrong_member_uid_returns_bind_conflict(tmp_path, monkeypatch):
     _add_card(factory, other_member_id)
     session_uuid = _create_session(factory, member_id, device_id, "PIN_ONLY")
     try:
-        with factory.begin() as session:
+        with factory.begin() as session:  # noqa: SIM117
             with pytest.raises(DomainError) as exc:
                 BindingService(session).on_card_scanned(
                     session_uuid, "AABBCCDD", datetime.now(UTC)
@@ -361,7 +361,7 @@ def test_pin_only_unknown_uid_returns_card_unknown(tmp_path, monkeypatch):
     engine, factory, member_id, device_id, _token = _database(tmp_path, monkeypatch)
     session_uuid = _create_session(factory, member_id, device_id, "PIN_ONLY")
     try:
-        with factory.begin() as session:
+        with factory.begin() as session:  # noqa: SIM117
             with pytest.raises(DomainError) as exc:
                 BindingService(session).on_card_scanned(
                     session_uuid, "AABBCCDD", datetime.now(UTC)
@@ -375,7 +375,7 @@ def test_pin_only_unknown_uid_returns_card_unknown(tmp_path, monkeypatch):
 async def test_session_expiry_sends_bind_cancel(tmp_path, monkeypatch):
     engine, factory, member_id, device_id, _token = _database(tmp_path, monkeypatch)
     session_uuid = _create_session(factory, member_id, device_id)
-    with factory.begin() as session:
+    with factory.begin() as session:  # noqa: SIM117
         row = session.scalar(
             select(CardBindSession).where(CardBindSession.session_uuid == session_uuid)
         )
@@ -406,7 +406,7 @@ def test_device_cancel_transitions_session_to_cancelled(tmp_path, monkeypatch):
     engine, factory, member_id, device_id, _token = _database(tmp_path, monkeypatch)
     session_uuid = _create_session(factory, member_id, device_id)
     try:
-        with factory.begin() as session:
+        with factory.begin() as session:  # noqa: SIM117
             row = BindingService(session).on_device_cancel(session_uuid)
             assert row.state == "CANCELLED"
     finally:

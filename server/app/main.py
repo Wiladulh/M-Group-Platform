@@ -13,9 +13,15 @@ from app.logging import configure_logging
 from app.routers.device import router as device_router
 from app.routers.payments import router as payments_router
 from app.routers.topups import router as topups_router
-from app.services.events import CacheUpdateEvent, CardStatusChangedEvent, CatalogChangedEvent, _bus
-from app.services.offline_monitor import offline_monitor_loop
 from app.services.bind_expiry import bind_expiry_loop
+from app.services.events import (
+    CacheInvalidateEvent,
+    CacheUpdateEvent,
+    CardStatusChangedEvent,
+    CatalogChangedEvent,
+    _bus,
+)
+from app.services.offline_monitor import offline_monitor_loop
 from app.ws.broadcast import broadcast_bus
 from app.ws.connection_manager import manager
 from app.ws.handlers import ws_device_endpoint

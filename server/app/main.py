@@ -1,6 +1,6 @@
 """FastAPI application entry point."""
 
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -36,10 +36,8 @@ async def lifespan(application: FastAPI):
         yield
     finally:
         monitor.cancel()
-        try:
+        with suppress(asyncio.CancelledError):
             await monitor
-        except asyncio.CancelledError:
-            pass
         await broadcast_bus.stop()
         connection.close()
         engine.dispose()

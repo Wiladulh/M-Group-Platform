@@ -12,6 +12,7 @@ from app.errors import DomainError
 from app.logging import configure_logging
 from app.routers.device import router as device_router
 from app.routers.payments import router as payments_router
+from app.routers.sync import router as sync_router
 from app.routers.topups import router as topups_router
 from app.services.bind_expiry import bind_expiry_loop
 from app.services.events import (
@@ -165,4 +166,5 @@ _bus.subscribe(CatalogChangedEvent, _broadcast_domain_event)
 
 app.include_router(device_router)
 app.include_router(payments_router)
+app.include_router(sync_router)
 app.include_router(topups_router)

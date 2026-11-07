@@ -66,7 +66,7 @@ def _check_pin(session: Session, card_id: int, pin: str, pin_hash: str) -> None:
         card.pin_fail_count += 1
         if card.pin_fail_count >= 3:
             card.status = "LOCKED"
-            bump_member_cache_version(session)
+            bump_member_cache_version(session, card.member_id)
             locked = True
         else:
             attempts_left = max(0, 3 - card.pin_fail_count)

@@ -12,12 +12,13 @@ logger = logging.getLogger(__name__)
 
 class BroadcastBus:
     def __init__(self) -> None:
-        self._queue: asyncio.Queue[EnvelopeEnvelope] = asyncio.Queue()
+        self._queue: asyncio.Queue[EnvelopeEnvelope] | None = None
         self._task: asyncio.Task | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
 
     async def start(self) -> None:
         self._loop = asyncio.get_running_loop()
+        self._queue = asyncio.Queue()
         if self._task is None:
             self._task = asyncio.create_task(self._consume())
 
@@ -28,17 +29,22 @@ class BroadcastBus:
                 await self._task
             self._task = None
         self._loop = None
+        self._queue = None
 
     def enqueue(self, envelope: EnvelopeEnvelope) -> None:
-        if self._loop is not None and self._loop.is_running():
-            self._loop.call_soon_threadsafe(self._queue.put_nowait, envelope)
+        if self._loop is not None and self._loop.is_running() and self._queue is not None:
+            queue = self._queue
+            self._loop.call_soon_threadsafe(queue.put_nowait, envelope)
 
     async def _consume(self) -> None:
         while True:
-            envelope = await self._queue.get()
+            queue = self._queue
+            if queue is None:
+                return
+            envelope = await queue.get()
             for device_pk in manager.connected_devices():
                 await manager.send(device_pk, envelope)
-            self._queue.task_done()
+            queue.task_done()
 
 
 broadcast_bus = BroadcastBus()

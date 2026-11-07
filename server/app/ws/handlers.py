@@ -9,7 +9,7 @@ from fastapi import WebSocket, WebSocketDisconnect
 from pydantic import ValidationError
 from sqlalchemy import select
 
-from app.db import SessionLocal
+from app import db
 from app.models import Device
 from app.security.device_token import verify_device_token
 from app.ws.connection_manager import manager
@@ -40,10 +40,13 @@ async def ws_device_endpoint(websocket: WebSocket) -> None:
             await websocket.close(code=4002, reason="hello_required")
             return
 
-        with SessionLocal() as session:
+        with db.SessionLocal() as session:
             device = session.scalar(select(Device).where(Device.device_id == hello.device_id))
-            if (device is None or device.status != "ACTIVE"
-                    or not verify_device_token(hello.token, device.token_hash)):
+            if (
+                device is None
+                or device.status != "ACTIVE"
+                or not verify_device_token(hello.token, device.token_hash)
+            ):
                 await websocket.close(code=4003, reason="unauthorized")
                 return
             device_pk = device.id
@@ -55,10 +58,14 @@ async def ws_device_endpoint(websocket: WebSocket) -> None:
             session.commit()
 
         await manager.connect(device_pk, websocket)
-        await websocket.send_text(EnvelopeEnvelope.build(
-            "hello_ok", {"device_id": hello.device_id, "server_time_utc": _utc_iso()},
-            message_id=message.id,
-        ).model_dump_json())
+        heartbeat.record_ping(device_pk)
+        await websocket.send_text(
+            EnvelopeEnvelope.build(
+                "hello_ok",
+                {"device_id": hello.device_id, "server_time_utc": _utc_iso()},
+                message_id=message.id,
+            ).model_dump_json()
+        )
         while True:
             try:
                 raw = await asyncio.wait_for(websocket.receive_text(), timeout=IDLE_DISCONNECT_S)
@@ -73,33 +80,41 @@ async def ws_device_endpoint(websocket: WebSocket) -> None:
             if incoming.type == "ping":
                 heartbeat.record_ping(device_pk)
                 heartbeat.record_pong(device_pk)
-                with SessionLocal.begin() as session:
+                with db.SessionLocal.begin() as session:
                     current = session.get(Device, device_pk)
                     if current is not None:
                         current.last_seen_at = datetime.now(UTC)
-                await websocket.send_text(EnvelopeEnvelope.build(
-                    "pong", {"server_time_utc": _utc_iso()}, message_id=incoming.id
-                ).model_dump_json())
+                await websocket.send_text(
+                    EnvelopeEnvelope.build(
+                        "pong", {"server_time_utc": _utc_iso()}, message_id=incoming.id
+                    ).model_dump_json()
+                )
             elif incoming.type == "pong":
                 heartbeat.record_pong(device_pk)
                 manager._last_pong_utc[device_pk] = datetime.now(UTC)
             elif incoming.type == "status":
-                with SessionLocal.begin() as session:
+                with db.SessionLocal.begin() as session:
                     current = session.get(Device, device_pk)
                     if current is not None:
                         current.last_heartbeat_json = json.dumps(
                             {"state": incoming.data.get("state"), "ts": incoming.ts}
                         )
             elif incoming.type == "ack":
-                logger.debug("device_ws_ack device_id=%s message_id=%s", hello.device_id,
-                             incoming.data.get("id"))
+                logger.debug(
+                    "device_ws_ack device_id=%s message_id=%s",
+                    hello.device_id,
+                    incoming.data.get("id"),
+                )
             elif incoming.type.startswith("bind."):
                 logger.warning("unexpected_bind_message_before_p11 device_id=%s", hello.device_id)
                 await websocket.close(code=4004, reason="bind_not_available")
                 break
             else:
-                logger.debug("device_ws_unknown_message device_id=%s type=%s",
-                             hello.device_id, incoming.type)
+                logger.debug(
+                    "device_ws_unknown_message device_id=%s type=%s",
+                    hello.device_id,
+                    incoming.type,
+                )
     except WebSocketDisconnect:
         pass
     finally:

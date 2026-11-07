@@ -117,17 +117,25 @@ async def ws_device(websocket):
 def _broadcast_domain_event(event):
     if isinstance(event, CacheUpdateEvent):
         for uid in event.uid_list:
-            broadcast_bus.enqueue(EnvelopeEnvelope.build("cache.update", {
-                "uid": uid, "balance_snapshot": event.balance_snapshot,
-                "offline_allowance": max(event.offline_allowance.values(), default=0),
-                "card_status": event.card_status,
-            }))
+            broadcast_bus.enqueue(
+                EnvelopeEnvelope.build(
+                    "cache.update",
+                    {
+                        "uid": uid,
+                        "balance_snapshot": event.balance_snapshot,
+                        "offline_allowance": max(event.offline_allowance.values(), default=0),
+                        "card_status": event.card_status,
+                    },
+                )
+            )
     elif isinstance(event, CardStatusChangedEvent):
-        broadcast_bus.enqueue(EnvelopeEnvelope.build("card.status_changed", {
-            "uid": event.uid, "status": event.status,
-        }))
+        broadcast_bus.enqueue(
+            EnvelopeEnvelope.build("card.status_changed", {"uid": event.uid, "status": event.status})
+        )
     elif isinstance(event, CatalogChangedEvent):
-        broadcast_bus.enqueue(EnvelopeEnvelope.build("catalog.changed", {"version": event.version}))
+        broadcast_bus.enqueue(
+            EnvelopeEnvelope.build("catalog.changed", {"version": event.version})
+        )
 
 
 _bus.subscribe(CacheUpdateEvent, _broadcast_domain_event)

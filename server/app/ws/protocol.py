@@ -5,15 +5,30 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 MessageType = Literal[
-    "hello", "hello_ok", "ping", "pong", "ack", "status",
-    "bind.start", "bind.card_scanned", "bind.pin_submitted", "bind.error",
-    "bind.done", "bind.cancel", "catalog.changed", "cache.invalidate",
-    "cache.update", "card.status_changed", "config.changed", "force_disconnect",
+    "hello",
+    "hello_ok",
+    "ping",
+    "pong",
+    "ack",
+    "status",
+    "bind.start",
+    "bind.card_scanned",
+    "bind.pin_submitted",
+    "bind.error",
+    "bind.done",
+    "bind.cancel",
+    "catalog.changed",
+    "cache.invalidate",
+    "cache.update",
+    "card.status_changed",
+    "config.changed",
+    "force_disconnect",
 ]
 
 
 class EnvelopeEnvelope(BaseModel):
     model_config = ConfigDict(extra="forbid")
+
     v: Literal[1] = 1
     id: str
     type: MessageType
@@ -21,12 +36,21 @@ class EnvelopeEnvelope(BaseModel):
     data: dict = Field(default_factory=dict)
 
     @classmethod
-    def build(cls, message_type: MessageType, data: dict | None = None, message_id: str | None = None):
+    def build(
+        cls,
+        message_type: MessageType,
+        data: dict | None = None,
+        message_id: str | None = None,
+    ):
         from datetime import UTC, datetime
         from uuid import uuid4
 
-        return cls(id=message_id or str(uuid4()), type=message_type,
-                   ts=int(datetime.now(UTC).timestamp()), data=data or {})
+        return cls(
+            id=message_id or str(uuid4()),
+            type=message_type,
+            ts=int(datetime.now(UTC).timestamp()),
+            data=data or {},
+        )
 
 
 class HelloData(BaseModel):

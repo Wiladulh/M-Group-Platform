@@ -1,14 +1,13 @@
 """Real TestClient WebSocket handshake, authentication, and heartbeat tests."""
 
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, select
-from sqlalchemy.orm import sessionmaker
-from starlette.websockets import WebSocketDisconnect
-
 from app import db
 from app.main import app
 from app.models import Base, Device, DeviceEvent
 from app.security.device_token import generate_device_token, hash_device_token
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import sessionmaker
+from starlette.websockets import WebSocketDisconnect
 
 
 def _database(tmp_path, monkeypatch):
@@ -65,7 +64,7 @@ def test_hello_missing_and_invalid_token_close_codes(tmp_path, monkeypatch):
                 ws.send_json({"v": 1, "id": "x", "type": "ping", "ts": 1, "data": {}})
                 try:
                     ws.receive_text()
-                    assert False, "expected close"
+                    raise AssertionError("expected close")
                 except WebSocketDisconnect as exc:
                     assert exc.code == 4002
             with client.websocket_connect("/ws/device") as ws:

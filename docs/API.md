@@ -133,3 +133,66 @@ The device transport is a WebSocket endpoint, not REST: connect to `/ws/device` 
 ## Remote card binding
 
 P11 provides the binding state machine and device WebSocket messages only. It does not add an admin REST route or WebUI. The future `POST /admin/bind-sessions` endpoint is reserved for P14.
+
+
+## POST /api/v1/device/sync
+
+Device-authenticated offline transaction synchronization. The request contains a
+unique `batch_uuid` and at most 50 items. Items are processed sequentially in
+ascending `offline_ts` order, regardless of their order in the submitted array.
+
+```json
+{
+  "batch_uuid": "batch-2026-11-08-001",
+  "items": [{
+    "txn_uuid": "offline-payment-0001",
+    "uid": "A1B2C3D4",
+    "slot_no": null,
+    "product_id": null,
+    "manual_amount": null,
+    "price": 5000,
+    "offline_ts": 1794099600,
+    "ts_untrusted": null,
+    "dispense_result": null,
+    "pin_fail_events": 0
+  }]
+}
+```
+
+Each result is `ACCEPTED`, `DUPLICATE`, or `REJECTED`. Rejected known-member
+items are recorded as `transactions.status=REJECTED` without changing balance.
+An insufficient-at-sync result additionally creates an OPEN
+`shortfall_records` row. Unknown-card and UUID-conflict rejections are recorded
+in the batch detail log only because a transaction row cannot safely be linked
+to a member or would violate the unique transaction UUID constraint.
+
+The same `batch_uuid` from the same device returns the stored result as
+`DUPLICATE` without replaying writes. Repeating an item UUID with identical
+business payload returns the original balance; a changed payload returns
+`DUPLICATE_TXN_CONFLICT`. Item-level rejections do not fail the batch.
+
+## GET /api/v1/device/member-cache?since={version}
+
+Returns changed member-cache entries for the authenticated device, limited to
+the top 100 members selected by the offline cache policy. A matching version
+returns HTTP 200 with an empty `entries` array; a future version returns HTTP
+400 `VALIDATION_ERROR`.
+
+```json
+{
+  "cache_version": 12,
+  "entries": [{
+    "uid": "A1B2C3D4",
+    "member_code": "MG-A00001",
+    "name": "Member Example",
+    "balance_snapshot": 15000,
+    "snapshot_ts": "2026-11-08T02:00:00Z",
+    "offline_allowance": 10000,
+    "card_status": "ACTIVE",
+    "entry_version": 12
+  }]
+}
+```
+
+Both endpoints require `Authorization: Bearer <device_token>` and
+`X-Device-Id`. Batch size over 50 returns HTTP 400 `VALIDATION_ERROR`.

@@ -2,7 +2,7 @@
 
 from contextlib import asynccontextmanager, suppress
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, WebSocket
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
@@ -110,7 +110,7 @@ def healthz() -> dict[str, str]:
 
 
 @app.websocket("/ws/device")
-async def ws_device(websocket):
+async def ws_device(websocket: WebSocket):
     await ws_device_endpoint(websocket)
 
 

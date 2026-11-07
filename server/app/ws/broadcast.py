@@ -12,35 +12,34 @@ logger = logging.getLogger(__name__)
 
 class BroadcastBus:
     def __init__(self) -> None:
-        self._queue: asyncio.Queue[EnvelopeEnvelope] | None = None
-        self._task: asyncio.Task | None = None
-        self._loop: asyncio.AbstractEventLoop | None = None
+        self._consumers: dict[
+            asyncio.AbstractEventLoop,
+            tuple[asyncio.Queue[EnvelopeEnvelope], asyncio.Task],
+        ] = {}
 
     async def start(self) -> None:
-        self._loop = asyncio.get_running_loop()
-        self._queue = asyncio.Queue()
-        if self._task is None:
-            self._task = asyncio.create_task(self._consume())
+        loop = asyncio.get_running_loop()
+        if loop not in self._consumers:
+            queue: asyncio.Queue[EnvelopeEnvelope] = asyncio.Queue()
+            task = asyncio.create_task(self._consume(queue))
+            self._consumers[loop] = (queue, task)
 
     async def stop(self) -> None:
-        if self._task is not None:
-            self._task.cancel()
+        loop = asyncio.get_running_loop()
+        consumer = self._consumers.pop(loop, None)
+        if consumer is not None:
+            _queue, task = consumer
+            task.cancel()
             with suppress(asyncio.CancelledError):
-                await self._task
-            self._task = None
-        self._loop = None
-        self._queue = None
+                await task
 
     def enqueue(self, envelope: EnvelopeEnvelope) -> None:
-        if self._loop is not None and self._loop.is_running() and self._queue is not None:
-            queue = self._queue
-            self._loop.call_soon_threadsafe(queue.put_nowait, envelope)
+        for loop, (queue, _task) in tuple(self._consumers.items()):
+            if loop.is_running():
+                loop.call_soon_threadsafe(queue.put_nowait, envelope)
 
-    async def _consume(self) -> None:
+    async def _consume(self, queue: asyncio.Queue[EnvelopeEnvelope]) -> None:
         while True:
-            queue = self._queue
-            if queue is None:
-                return
             envelope = await queue.get()
             for device_pk in manager.connected_devices():
                 await manager.send(device_pk, envelope)

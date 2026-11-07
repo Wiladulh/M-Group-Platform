@@ -6,6 +6,7 @@ from contextlib import suppress
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 
 from app import db
 from app.models import Device, DeviceEvent
@@ -28,28 +29,32 @@ async def offline_monitor_loop(app) -> None:
                         await ws.close(code=4006, reason="heartbeat_timeout")
                 await manager.disconnect(device_pk)
         with db.SessionLocal() as session:
-            threshold = int(get_setting(session, "device_offline_alert_s", 120))
-            cutoff = datetime.now(UTC) - timedelta(seconds=threshold)
-            devices = session.scalars(
-                select(Device).where(
-                    Device.status == "ACTIVE",
-                    Device.ws_connected.is_(False),
-                    Device.last_seen_at.is_not(None),
-                    Device.last_seen_at < cutoff,
-                )
-            ).all()
-            for device in devices:
-                opened = session.scalar(
-                    select(DeviceEvent)
-                    .where(
-                        DeviceEvent.device_id == device.id,
-                        DeviceEvent.event == "OFFLINE",
-                        DeviceEvent.duration_s.is_(None),
+            try:
+                threshold = int(get_setting(session, "device_offline_alert_s", 120))
+                cutoff = datetime.now(UTC) - timedelta(seconds=threshold)
+                devices = session.scalars(
+                    select(Device).where(
+                        Device.status == "ACTIVE",
+                        Device.ws_connected.is_(False),
+                        Device.last_seen_at.is_not(None),
+                        Device.last_seen_at < cutoff,
                     )
-                    .order_by(DeviceEvent.at.desc())
-                    .limit(1)
-                )
-                if opened is not None and opened.detail != "alert_fired":
-                    fire_device_offline(device, device.last_seen_at)
-                    opened.detail = "alert_fired"
-            session.commit()
+                ).all()
+                for device in devices:
+                    opened = session.scalar(
+                        select(DeviceEvent)
+                        .where(
+                            DeviceEvent.device_id == device.id,
+                            DeviceEvent.event == "OFFLINE",
+                            DeviceEvent.duration_s.is_(None),
+                        )
+                        .order_by(DeviceEvent.at.desc())
+                        .limit(1)
+                    )
+                    if opened is not None and opened.detail != "alert_fired":
+                        fire_device_offline(device, device.last_seen_at)
+                        opened.detail = "alert_fired"
+                session.commit()
+            except SQLAlchemyError:
+                logger.debug("offline_monitor_database_not_ready", exc_info=True)
+                session.rollback()

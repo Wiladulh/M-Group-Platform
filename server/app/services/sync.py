@@ -49,8 +49,14 @@ def _items_json(item: SyncItem, product_name: str | None = None) -> str | None:
     return json.dumps(data, separators=(",", ":"), ensure_ascii=False)
 
 
-def _payload_identical(row: Transaction, item: SyncItem, device: Device,
-                       member_id: int, card_id: int, items_json: str | None) -> bool:
+def _payload_identical(
+    row: Transaction,
+    item: SyncItem,
+    device: Device,
+    member_id: int,
+    card_id: int,
+    items_json: str | None,
+) -> bool:
     occurred = _utc_from_epoch(item.offline_ts)
     stored = row.occurred_at
     if stored.tzinfo is None:
@@ -92,23 +98,38 @@ class SyncService:
         ).all()
         delta = []
         for allowance, member, card in rows:
-            delta.append(CacheEntryDelta(
-                uid=card.uid,
-                member_code=member.member_code,
-                name=member.full_name,
-                balance_snapshot=member.balance,
-                snapshot_ts=(allowance.computed_at.replace(tzinfo=UTC) if allowance.computed_at.tzinfo is None else allowance.computed_at.astimezone(UTC)).isoformat().replace("+00:00", "Z"),
-                offline_allowance=allowance.amount,
-                card_status=card.status,
-                entry_version=get_member_cache_entry_version(
-                    self.session, member.id, device_id
-                ),
-            ))
+            delta.append(
+                CacheEntryDelta(
+                    uid=card.uid,
+                    member_code=member.member_code,
+                    name=member.full_name,
+                    balance_snapshot=member.balance,
+                    snapshot_ts=(
+                        allowance.computed_at.replace(tzinfo=UTC)
+                        if allowance.computed_at.tzinfo is None
+                        else allowance.computed_at.astimezone(UTC)
+                    )
+                    .isoformat()
+                    .replace("+00:00", "Z"),
+                    offline_allowance=allowance.amount,
+                    card_status=card.status,
+                    entry_version=get_member_cache_entry_version(
+                        self.session, member.id, device_id
+                    ),
+                )
+            )
         return delta
 
     def _reject_row(
-        self, item: SyncItem, *, member: Member, card: Card | None,
-        device: Device, reason: str, card_inactive: bool, items_json: str | None,
+        self,
+        item: SyncItem,
+        *,
+        member: Member,
+        card: Card | None,
+        device: Device,
+        reason: str,
+        card_inactive: bool,
+        items_json: str | None,
     ) -> Transaction:
         balance = member.balance
         row = Transaction(
@@ -146,15 +167,19 @@ class SyncService:
                 product = self.session.get(Product, item.product_id)
                 product_name = product.name if product else None
             payload_json = _items_json(item, product_name)
-            if member is not None and card is not None and _payload_identical(
-                existing, item, device, member.id, card.id, payload_json
+            if (
+                member is not None
+                and card is not None
+                and _payload_identical(existing, item, device, member.id, card.id, payload_json)
             ):
                 return SyncItemResult(
-                    txn_uuid=item.txn_uuid, status="DUPLICATE",
+                    txn_uuid=item.txn_uuid,
+                    status="DUPLICATE",
                     balance_after=existing.balance_after,
                 ), member.id
             return SyncItemResult(
-                txn_uuid=item.txn_uuid, status="REJECTED",
+                txn_uuid=item.txn_uuid,
+                status="REJECTED",
                 reason="DUPLICATE_TXN_CONFLICT",
                 balance_after=None,
             ), None
@@ -181,8 +206,12 @@ class SyncService:
 
         if member.status == "SUSPENDED":
             self._reject_row(
-                item, member=member, card=card, device=device,
-                reason="MEMBER_SUSPENDED", card_inactive=inactive,
+                item,
+                member=member,
+                card=card,
+                device=device,
+                reason="MEMBER_SUSPENDED",
+                card_inactive=inactive,
                 items_json=serialized_items,
             )
             result = SyncItemResult(
@@ -191,8 +220,12 @@ class SyncService:
             affected = member.id
         elif item.offline_ts > int(datetime.now(UTC).timestamp()) + 300:
             self._reject_row(
-                item, member=member, card=card, device=device,
-                reason="CLOCK_SKEW_OFFLINE", card_inactive=inactive,
+                item,
+                member=member,
+                card=card,
+                device=device,
+                reason="CLOCK_SKEW_OFFLINE",
+                card_inactive=inactive,
                 items_json=serialized_items,
             )
             result = SyncItemResult(
@@ -202,7 +235,8 @@ class SyncService:
         else:
             try:
                 original = self.ledger._debit_internal(
-                    member.id, item.price,
+                    member.id,
+                    item.price,
                     txn_uuid=item.txn_uuid,
                     card_id=card.id,
                     device_id=device.id,
@@ -216,8 +250,12 @@ class SyncService:
                 )
             except InsufficientBalance:
                 self._reject_row(
-                    item, member=member, card=card, device=device,
-                    reason="INSUFFICIENT_AT_SYNC", card_inactive=inactive,
+                    item,
+                    member=member,
+                    card=card,
+                    device=device,
+                    reason="INSUFFICIENT_AT_SYNC",
+                    card_inactive=inactive,
                     items_json=serialized_items,
                 )
                 shortfall = ShortfallRecord(
@@ -232,8 +270,10 @@ class SyncService:
                 self.session.add(shortfall)
                 self.session.flush()
                 result = SyncItemResult(
-                    txn_uuid=item.txn_uuid, status="REJECTED",
-                    reason="INSUFFICIENT_AT_SYNC", shortfall_id=shortfall.id,
+                    txn_uuid=item.txn_uuid,
+                    status="REJECTED",
+                    reason="INSUFFICIENT_AT_SYNC",
+                    shortfall_id=shortfall.id,
                 )
                 affected = member.id
             else:
@@ -241,7 +281,8 @@ class SyncService:
                     original.status = "DISPENSE_FAILED"
                     refund_uuid = str(uuid5(REFUND_NAMESPACE, item.txn_uuid))
                     self.ledger._credit_internal(
-                        member.id, item.price,
+                        member.id,
+                        item.price,
                         txn_uuid=refund_uuid,
                         card_id=card.id,
                         device_id=device.id,
@@ -257,7 +298,8 @@ class SyncService:
                 else:
                     original.status = "COMPLETED"
                 result = SyncItemResult(
-                    txn_uuid=item.txn_uuid, status="ACCEPTED",
+                    txn_uuid=item.txn_uuid,
+                    status="ACCEPTED",
                     balance_after=original.balance_after,
                 )
                 affected = member.id
@@ -323,9 +365,7 @@ class SyncService:
             for member_id in sorted(affected_members):
                 AllowanceService(self.session).apply_allowances(member_id)
 
-            ordered_results = [
-                results_by_uuid[item.txn_uuid][0] for item in batch.items
-            ]
+            ordered_results = [results_by_uuid[item.txn_uuid][0] for item in batch.items]
             accepted = sum(result.status == "ACCEPTED" for result in ordered_results)
             rejected = sum(result.status == "REJECTED" for result in ordered_results)
             log_row.accepted = accepted

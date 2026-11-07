@@ -70,14 +70,16 @@ def get_member_cache(
         entry_version = get_member_cache_entry_version(session, member.id, device.id)
         if entry_version <= since:
             continue
-        entries.append({
-            "uid": card.uid,
-            "member_code": member.member_code,
-            "name": member.full_name,
-            "balance_snapshot": member.balance,
-            "snapshot_ts": allowance.computed_at.isoformat().replace("+00:00", "Z"),
-            "offline_allowance": allowance.amount,
-            "card_status": card.status,
-            "entry_version": entry_version,
-        })
+        entries.append(
+            {
+                "uid": card.uid,
+                "member_code": member.member_code,
+                "name": member.full_name,
+                "balance_snapshot": member.balance,
+                "snapshot_ts": allowance.computed_at.isoformat().replace("+00:00", "Z"),
+                "offline_allowance": allowance.amount,
+                "card_status": card.status,
+                "entry_version": entry_version,
+            }
+        )
     return MemberCacheResponse(cache_version=current, entries=entries)

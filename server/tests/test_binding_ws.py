@@ -4,11 +4,11 @@ import asyncio
 from datetime import UTC, datetime
 
 import pytest
-from app.models import Card, CardBindSession, Member, OfflineAllowance
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from app.main import app
+from app.models import Card, CardBindSession, Member, OfflineAllowance
 from tests.test_binding import _add_card, _add_member, _create_session, _database
 
 
@@ -96,6 +96,10 @@ async def test_replace_card_via_websocket_e2e(tmp_path, monkeypatch):
             with client.websocket_connect("/ws/device") as ws:
                 await _connect_and_start(ws, token, session_uuid, "REPLACE_CARD")
                 _send_scan(ws, session_uuid, "11223344")
+                ws.send_json(
+                    {"v": 1, "id": "scan-barrier", "type": "ping", "ts": 4, "data": {}}
+                )
+                assert (await _receive_json(ws))["type"] == "pong"
                 with factory() as session:
                     bind = session.scalar(
                         select(CardBindSession).where(
@@ -214,10 +218,10 @@ async def test_replace_card_via_websocket_uid_conflict(tmp_path, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_pin_only_via_websocket_unknown_uid(tmp_path, monkeypatch):
-    engine, factory, member_id, device_id, token = _database(
+    engine, factory, _member_id, device_id, token = _database(
         tmp_path, monkeypatch, device_code="CSH-001"
     )
-    session_uuid = _create_session(factory, member_id, device_id, "PIN_ONLY")
+    session_uuid = _create_session(factory, _member_id, device_id, "PIN_ONLY")
     try:
         with TestClient(app) as client:
             with client.websocket_connect("/ws/device") as ws:

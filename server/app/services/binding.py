@@ -257,7 +257,7 @@ class BindingService:
         row.failure_reason = None
         row.pin_attempts = 0
         row.pin_candidate_hash = None
-        bump_member_cache_version(self.session)
+        bump_member_cache_version(self.session, member.id)
         self.session.info.setdefault("mgt_pending_events", []).append(
             CardStatusChangedEvent(uid=card.uid, status="ACTIVE")
         )

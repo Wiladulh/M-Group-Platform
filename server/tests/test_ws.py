@@ -83,7 +83,7 @@ def test_hello_missing_and_invalid_token_close_codes(tmp_path, monkeypatch):
     token = generate_device_token()
     _device(factory, token)
     try:
-        with TestClient(app) as client:
+        with TestClient(app) as client:  # noqa: SIM117
             with client.websocket_connect("/ws/device") as ws:
                 ws.send_json({"v": 1, "id": "x", "type": "ping", "ts": 1, "data": {}})
                 with pytest.raises(WebSocketDisconnect) as exc:
@@ -132,7 +132,7 @@ def test_one_active_connection_per_device_closes_old_socket_4001(tmp_path, monke
     token = generate_device_token()
     _device(factory, token)
     try:
-        with TestClient(app) as client:
+        with TestClient(app) as client:  # noqa: SIM117
             with client.websocket_connect("/ws/device") as first:
                 first.send_json(_hello(token, message_id="first"))
                 assert first.receive_json()["type"] == "hello_ok"
@@ -190,7 +190,7 @@ def test_cache_update_broadcast_to_all_connected_devices(tmp_path, monkeypatch):
     _device(factory, token_a, device_id="CSH-A")
     _device(factory, token_b, device_id="CSH-B")
     try:
-        with TestClient(app) as client:
+        with TestClient(app) as client:  # noqa: SIM117
             with client.websocket_connect("/ws/device") as ws_a:
                 ws_a.send_json(_hello(token_a, "CSH-A", "hello-a"))
                 ws_a.receive_json()
@@ -218,7 +218,7 @@ def test_card_status_changed_broadcast_to_all_connected_devices(tmp_path, monkey
     _device(factory, token_a, device_id="CSH-A")
     _device(factory, token_b, device_id="CSH-B")
     try:
-        with TestClient(app) as client:
+        with TestClient(app) as client:  # noqa: SIM117
             with client.websocket_connect("/ws/device") as ws_a:
                 ws_a.send_json(_hello(token_a, "CSH-A", "hello-a"))
                 ws_a.receive_json()

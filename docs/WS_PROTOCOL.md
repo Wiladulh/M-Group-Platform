@@ -107,3 +107,6 @@ stateDiagram-v2
 ```
 
 The server stores only a peppered HMAC candidate hash during PIN confirmation, never the plaintext candidate. A successful `bind.done` masks the UID as four bullets followed by its last four characters.
+
+
+P11 supersedes the P10 pre-binding behavior: supported `bind.*` messages are handled by the binding state machine; unknown `bind.*` messages are logged and ignored. Close code 4004 remains documented as the legacy pre-P11 unsupported-binding close code and is not used for supported P11 flows.

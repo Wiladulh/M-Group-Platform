@@ -14,7 +14,7 @@
 | P8 | AdminTopupService create/reverse, atomic internal ledger reversal, admin audit, REVERSE_INSUFFICIENT | DONE | e2509927de86ac37762842675e7b746b55a52dd4 |
 | P9 | Cache top-100 ordering, allowance recompute, hard hold mode, commit-aware CacheUpdateEvent | DONE | c2066b970db9317fcd97c8088da4cda5b34d41aa |
 | P10 | Authenticated device WebSocket, heartbeat, device events and event broadcast | DONE | 9af7106f209a63de37edd648f591767300b5ef23 |
-| P11 | Remote card binding state machine, PIN confirmation, command acknowledgements and expiry | IN PROGRESS | — |
+| P11 | Remote card binding state machine, PIN confirmation, command acknowledgements and expiry | DONE | 15bee0b1228b5ff67dcee23b8ca53d744eeaac78 |
 
 ## Catatan
 - P0 hanya membuat dokumentasi; belum ada kode aplikasi, firmware, migrasi, atau konfigurasi runtime.
@@ -102,3 +102,12 @@
 - P10 implementation commit: `9af7106f209a63de37edd648f591767300b5ef23`.
 - Final P10 CI: [run 42341521891](https://github.com/Wiladulh/M-Group-Platform/actions/runs/42341521891); Ruff SUCCESS, Pytest SUCCESS (**167 passed**), total coverage **89.99%**.
 - Compared with P9 (155 tests), P10 adds **12 tests**. Close codes 4001–4006 are covered. No bind.* handler is implemented in P10.
+
+
+## P11 — Remote card binding
+- Implemented NEW_CARD, REPLACE_CARD and PIN_ONLY in BindingService with transactional card/PIN updates, conflict handling, PIN retry limit, cache invalidation/update events and masked bind.done.
+- Added acknowledged bind.start/error/done/cancel command helpers and the 5-second bind expiry worker.
+- Added migration 0005 for PIN confirmation candidate hash and retry count.
+- P11 CI: [run 42342827665](https://github.com/Wiladulh/M-Group-Platform/actions/runs/42342827665); Ruff SUCCESS, Pytest SUCCESS (**185 passed**), total coverage **90.08%**.
+- Compared with P10 (167 tests), P11 adds **18 tests**. The NEW_CARD happy path and device cancellation are exercised over real Starlette TestClient WebSocket connections.
+- No admin router or WebUI was added. The future `POST /admin/bind-sessions` endpoint remains P14 scope.

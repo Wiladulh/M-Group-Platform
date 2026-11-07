@@ -128,3 +128,8 @@ Nominal harus kelipatan Rp1.000, minimal `topup_min` (default Rp5.000), maksimal
 ## Device WebSocket
 
 The device transport is a WebSocket endpoint, not REST: connect to `/ws/device` and follow [WS_PROTOCOL.md](WS_PROTOCOL.md). The device token is sent in the first `hello.data.token` field, never in the URL. Existing REST endpoints are unchanged.
+
+
+## Remote card binding
+
+P11 provides the binding state machine and device WebSocket messages only. It does not add an admin REST route or WebUI. The future `POST /admin/bind-sessions` endpoint is reserved for P14.

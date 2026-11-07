@@ -137,3 +137,6 @@
 - PIN_ONLY requires the scanned UID to belong to the target member and the card to be ACTIVE or LOCKED. Unknown UID returns CARD_UNKNOWN; another member's UID returns BIND_CONFLICT.
 - Binding sessions expire after 90 seconds. The expiry worker scans every 5 seconds and sends an acknowledged bind.cancel command.
 - P11 deliberately adds no admin router or WebUI; P14 owns POST /admin/bind-sessions.
+
+- P11's NEW_CARD happy path and device-initiated cancellation are integration-tested through real `TestClient.websocket_connect` sessions. Fake sockets are limited to isolated expiry/ack command tests; the end-to-end binding transport is not mocked.
+- P11 has no admin REST endpoint. P14 will add `POST /admin/bind-sessions`; P11 exposes the reusable service and WebSocket command helpers only.

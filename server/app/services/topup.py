@@ -20,8 +20,8 @@ from app.schemas.topup import TopupRequestPayload, TopupResponse
 from app.security.device_auth import DeviceAuthInfo
 from app.security.operator_pin import verify_operator_pin
 from app.security.pins import verify_pin
-from app.services.ledger import IdempotencyConflict, LedgerService
 from app.services.cache_version import bump_member_cache_version
+from app.services.ledger import IdempotencyConflict, LedgerService
 from app.services.settings import get_setting
 
 
@@ -93,7 +93,7 @@ def _verify_member_pin(session: Session, card_id: int, pin: str, pin_hash: str) 
         card.pin_fail_count += 1
         if card.pin_fail_count >= 3:
             card.status = "LOCKED"
-            bump_member_cache_version(session)
+            bump_member_cache_version(session, card.member_id)
             locked = True
         else:
             attempts_left = 3 - card.pin_fail_count

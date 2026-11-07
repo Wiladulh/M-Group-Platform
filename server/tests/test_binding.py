@@ -375,9 +375,7 @@ def test_pin_only_wrong_member_uid_returns_bind_conflict(tmp_path, monkeypatch):
     try:
         with factory.begin() as session:  # noqa: SIM117
             with pytest.raises(DomainError) as exc:
-                BindingService(session).on_card_scanned(
-                    session_uuid, "AABBCCDD", datetime.now(UTC)
-                )
+                BindingService(session).on_card_scanned(session_uuid, "AABBCCDD", datetime.now(UTC))
         assert exc.value.code == "BIND_CONFLICT"
     finally:
         engine.dispose()

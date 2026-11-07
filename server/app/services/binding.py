@@ -14,6 +14,7 @@ from app.models import Card, CardBindSession, Member, OfflineAllowance
 from app.security.offline_pin import compute_offline_verifier, generate_salt
 from app.security.pins import hash_pin, validate_pin_format
 from app.services.allowance import AllowanceService
+from app.services.cache_version import bump_member_cache_version
 from app.services.events import CacheInvalidateEvent, CacheUpdateEvent, CardStatusChangedEvent
 
 ACTIVE_STATES = ("WAITING_DEVICE", "WAITING_CARD", "WAITING_PIN", "CONFIRM_PIN")
@@ -256,6 +257,7 @@ class BindingService:
         row.failure_reason = None
         row.pin_attempts = 0
         row.pin_candidate_hash = None
+        bump_member_cache_version(self.session)
         self.session.info.setdefault("mgt_pending_events", []).append(
             CardStatusChangedEvent(uid=card.uid, status="ACTIVE")
         )

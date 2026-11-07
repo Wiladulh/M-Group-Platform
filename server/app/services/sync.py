@@ -252,7 +252,7 @@ class SyncService:
             card.pin_fail_count += item.pin_fail_events
             if card.pin_fail_count >= 3 and card.status != "LOCKED":
                 card.status = "LOCKED"
-                bump_member_cache_version(self.session)
+                bump_member_cache_version(self.session, member.id)
                 self.session.info.setdefault("mgt_pending_events", []).append(
                     CardStatusChangedEvent(uid=card.uid, status="LOCKED")
                 )

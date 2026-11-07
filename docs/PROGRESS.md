@@ -13,7 +13,7 @@
 | P7 | Cashier top-up endpoint, operator PIN lockout/binding, ledger credit, idempotency, audit, allowance refresh | DONE | 370d8eedcd495fe3c899b33c1e2b3785e11dd875 |
 | P8 | AdminTopupService create/reverse, atomic internal ledger reversal, admin audit, REVERSE_INSUFFICIENT | DONE | e2509927de86ac37762842675e7b746b55a52dd4 |
 | P9 | Cache top-100 ordering, allowance recompute, hard hold mode, commit-aware CacheUpdateEvent | DONE | c2066b970db9317fcd97c8088da4cda5b34d41aa |
-| P10 | Authenticated device WebSocket, heartbeat, device events and event broadcast | IN PROGRESS | — |
+| P10 | Authenticated device WebSocket, heartbeat, device events and event broadcast | DONE | 9af7106f209a63de37edd648f591767300b5ef23 |
 
 ## Catatan
 - P0 hanya membuat dokumentasi; belum ada kode aplikasi, firmware, migrasi, atau konfigurasi runtime.
@@ -93,3 +93,11 @@
 - Updated ORM CHECK constraints, source assertions, DB schema documentation, and assumptions. No service workflow logic changed.
 - Regression coverage adds two migration tests and one each for Cashier/Admin source semantics.
 - Final 0004 verification (F4): `463919f3efb54a4e435591b86ef0b024f31978ec`; migration chain `0001 → 0002 → 0003 → 0004`; CI [run 42255896510](https://github.com/Wiladulh/M-Group-Platform/actions/runs/42255896510) — Ruff SUCCESS, Pytest SUCCESS (**155 passed**), total coverage **90.69%**. DISTINCT source regression assertions confirmed: `transactions` = `{ONLINE, OFFLINE_SYNC, ADMIN}` and `topup_requests` = `{WEBUI, CASHIER}`. Temporary `.github/workflows/format.yml` removed; no tag created in this patch batch.
+
+
+## P10 — Device WebSocket, heartbeat, and events
+- Authenticated `/ws/device` handshake uses the device token only in the first hello message body; all messages share the v1 envelope.
+- Added one-active-socket-per-device management, online/offline/WIFI_RECONNECT event recording, heartbeat/idle close handling, committed cache/card/catalog event broadcast, and best-effort alert webhooks.
+- P10 implementation commit: `9af7106f209a63de37edd648f591767300b5ef23`.
+- Final P10 CI: [run 42341521891](https://github.com/Wiladulh/M-Group-Platform/actions/runs/42341521891); Ruff SUCCESS, Pytest SUCCESS (**167 passed**), total coverage **89.99%**.
+- Compared with P9 (155 tests), P10 adds **12 tests**. Close codes 4001–4006 are covered. No bind.* handler is implemented in P10.

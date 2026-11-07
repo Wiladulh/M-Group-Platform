@@ -121,3 +121,10 @@
 - Alert webhook JSON is {device,event,since}; delivery is asynchronous, best-effort, and timeout-limited.
 - Heartbeat timing is 10-second ping target, 25-second pong timeout, and 30-second idle disconnect. Offline alert threshold defaults to 120 seconds.
 - P10 defines all protocol type literals; bind.* handlers are deferred to P11.
+
+
+## P10 test execution details
+- Each WebSocket integration test owns its own Starlette TestClient context; tests are not skipped or mocked at the transport boundary.
+- BroadcastBus maintains an async consumer per active TestClient event loop and dispatches committed events through the most recently started active loop. This avoids cross-loop task awaits and duplicate event delivery when the session-scoped REST TestClient fixture coexists with per-test WebSocket clients.
+- The offline monitor tolerates a not-yet-migrated test database by logging and retrying on SQLAlchemy errors; production startup still expects the schema migrations to have been applied.
+- Cache update broadcasts are targeted per connected device so each device receives its own computed offline allowance; card status and catalog changes are broadcast to all connected devices.

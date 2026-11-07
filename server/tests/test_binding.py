@@ -387,9 +387,7 @@ def test_pin_only_unknown_uid_returns_card_unknown(tmp_path, monkeypatch):
     try:
         with factory.begin() as session:  # noqa: SIM117
             with pytest.raises(DomainError) as exc:
-                BindingService(session).on_card_scanned(
-                    session_uuid, "AABBCCDD", datetime.now(UTC)
-                )
+                BindingService(session).on_card_scanned(session_uuid, "AABBCCDD", datetime.now(UTC))
         assert exc.value.code == "CARD_UNKNOWN"
     finally:
         engine.dispose()

@@ -16,7 +16,8 @@ from app.schemas.sync import (
 )
 from app.services.allowance import AllowanceService
 from app.services.cache_version import (
-    bump_member_cache_version, get_member_cache_version,
+    bump_member_cache_version, get_member_cache_entry_version,
+    get_member_cache_version,
 )
 from app.services.events import CardStatusChangedEvent
 from app.services.ledger import InsufficientBalance, LedgerService
@@ -88,7 +89,9 @@ class SyncService:
                 snapshot_ts=(allowance.computed_at.replace(tzinfo=UTC) if allowance.computed_at.tzinfo is None else allowance.computed_at.astimezone(UTC)).isoformat().replace("+00:00", "Z"),
                 offline_allowance=allowance.amount,
                 card_status=card.status,
-                entry_version=allowance.version,
+                entry_version=get_member_cache_entry_version(
+                    self.session, member.id, device_id
+                ),
             ))
         return delta
 

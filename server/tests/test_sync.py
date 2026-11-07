@@ -424,3 +424,19 @@ def test_batch_size_limit():
 def test_sync_requires_device_auth(client):
     response = client.get("/api/v1/device/member-cache?since=0")
     assert response.status_code == 401
+
+
+def test_get_member_cache_since_version(sync_db):
+    _, factory, device_id, _member_id, _ = sync_db
+    device = SimpleNamespace(id=device_id, device_id="CSH-001", type="cashier")
+    with factory() as session:
+        SyncService(session).process_batch(device, _batch(txn_uuid="cache-endpoint-txn"))
+    from app.routers.sync import get_member_cache
+    with factory() as session:
+        initial = get_member_cache(since=0, device=device, session=session)
+        assert initial.entries
+        current = initial.cache_version
+    with factory() as session:
+        unchanged = get_member_cache(since=current, device=device, session=session)
+        assert unchanged.entries == []
+        assert unchanged.cache_version == current

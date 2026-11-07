@@ -1,12 +1,11 @@
 """Offline sync service regression tests, including rejected ledger rows."""
 
 import json
-
-import pytest
 from datetime import UTC, datetime
 from types import SimpleNamespace
 
-from sqlalchemy import create_engine, select, event
+import pytest
+from sqlalchemy import create_engine, event, select
 from sqlalchemy.orm import sessionmaker
 
 from app.models import (
@@ -14,9 +13,9 @@ from app.models import (
     ShortfallRecord, Transaction,
 )
 from app.schemas.sync import SyncBatch, SyncItem
+from app.security.pins import hash_pin
 from app.services.ledger import LedgerService
 from app.services.sync import SyncService
-from app.security.pins import hash_pin
 
 
 @pytest.fixture
@@ -163,7 +162,7 @@ def test_sync_rejected_txn_row_created(sync_db):
 def test_sync_unknown_card_no_shortfall(sync_db):
     _, factory, device_id, _member_id, _ = sync_db
     with factory() as session:
-        device = session.get(Device, device_id)
+        device = SimpleNamespace(id=device_id, device_id="CSH-001", type="cashier")
         response = SyncService(session).process_batch(
             device, _batch(uid="FFFFFFFF", txn_uuid="unknown-card-txn")
         )

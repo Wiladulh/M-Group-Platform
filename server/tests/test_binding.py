@@ -488,6 +488,18 @@ def test_device_cancel_over_real_websocket(tmp_path, monkeypatch):
                 }
             )
             assert ws.receive_json()["type"] == "hello_ok"
+            start = ws.receive_json()
+            assert start["type"] == "bind.start"
+            assert start["data"]["session_uuid"] == session_uuid
+            ws.send_json(
+                {
+                    "v": 1,
+                    "id": "ack-bind-start",
+                    "type": "ack",
+                    "ts": 2,
+                    "data": {"id": start["id"]},
+                }
+            )
             ws.send_json(
                 {
                     "v": 1,

@@ -1,10 +1,9 @@
 """Offline sync service regression tests, including rejected ledger rows."""
 
 import json
+from datetime import UTC, datetime
 from types import SimpleNamespace
-from datetime import UTC, datetime, timedelta
 
-import pytest
 from sqlalchemy import create_engine, select, event
 from sqlalchemy.orm import sessionmaker
 
@@ -106,14 +105,14 @@ def test_sync_single_offline_payment_accepted(sync_db):
 
 def test_sync_insufficient_creates_shortfall(sync_db, monkeypatch):
     _, factory, device_id, member_id, _ = sync_db
-    with factory.begin() as session:
+    with factory() as session:
         LedgerService(session).debit(
             member_id, 5_000, txn_uuid="sync-pretest-debit",
             card_id=None, device_id=None, type="PAYMENT", source="ONLINE",
             performed_by_type="DEVICE", performed_by_id="TEST",
         )
     with factory() as session:
-        device = session.get(Device, device_id)
+        device = SimpleNamespace(id=device_id, device_id="CSH-001", type="cashier")
         response = SyncService(session).process_batch(
             device, _batch(price=8_000, txn_uuid="shortfall-txn")
         )

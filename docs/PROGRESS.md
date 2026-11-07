@@ -15,6 +15,7 @@
 | P9 | Cache top-100 ordering, allowance recompute, hard hold mode, commit-aware CacheUpdateEvent | DONE | c2066b970db9317fcd97c8088da4cda5b34d41aa |
 | P10 | Authenticated device WebSocket, heartbeat, device events and event broadcast | DONE | 9af7106f209a63de37edd648f591767300b5ef23 |
 | P11 | Remote card binding state machine, PIN confirmation, command acknowledgements and expiry | DONE | 15bee0b1228b5ff67dcee23b8ca53d744eeaac78 |
+| P12 | Offline sync, rejected transaction audit rows, shortfall handling, member-cache endpoints and idempotency | DONE | a8347881e66f8034bb1e427de91b8863f0f56ded |
 
 ## Catatan
 - P0 hanya membuat dokumentasi; belum ada kode aplikasi, firmware, migrasi, atau konfigurasi runtime.
@@ -111,3 +112,11 @@
 - P11 CI: [run 42342827665](https://github.com/Wiladulh/M-Group-Platform/actions/runs/42342827665); Ruff SUCCESS, Pytest SUCCESS (**185 passed**), total coverage **90.08%**.
 - Compared with P10 (167 tests), P11 adds **18 tests**. The NEW_CARD happy path and device cancellation are exercised over real Starlette TestClient WebSocket connections.
 - No admin router or WebUI was added. The future `POST /admin/bind-sessions` endpoint remains P14 scope.
+
+
+## P12 — Offline sync and member cache
+- P12 final commit (F4): `a8347881e66f8034bb1e427de91b8863f0f56ded`.
+- CI F3: [run 42400779718](https://github.com/Wiladulh/M-Group-Platform/actions/runs/42400779718); Ruff SUCCESS, Pytest SUCCESS (**211 passed**, 1 warning), total coverage **90.83%** (2,400 statements, 220 missed).
+- CI F4 (temporary formatter workflow removal): [run 42400925894](https://github.com/Wiladulh/M-Group-Platform/actions/runs/42400925894); Ruff SUCCESS, Pytest SUCCESS.
+- Ruff: all checks passed; 85 files already formatted. Temporary `.github/workflows/format.yml` removed.
+- Regression tests present: `test_sync_rejected_txn_row_created`, `test_sync_unknown_card_no_shortfall`, `test_verify_ledger_ignores_rejected`, and `test_sync_insufficient_creates_shortfall`.

@@ -140,3 +140,30 @@
 
 - P11's NEW_CARD happy path and device-initiated cancellation are integration-tested through real `TestClient.websocket_connect` sessions. Fake sockets are limited to isolated expiry/ack command tests; the end-to-end binding transport is not mocked.
 - P11 has no admin REST endpoint. P14 will add `POST /admin/bind-sessions`; P11 exposes the reusable service and WebSocket command helpers only.
+
+
+## P12 — Offline synchronization and member cache
+
+- Every sync batch is processed in one database transaction. Items are applied
+  sequentially by ascending `offline_ts`; the server does not parallelize
+  ledger operations.
+- A known-member rejected offline item is represented by a
+  `transactions.status=REJECTED` row with equal before/after balances. It is
+  excluded from ledger verification because `verify-ledger` sums only
+  COMPLETED, PENDING_DISPENSE, DISPENSE_FAILED, and REVERSED statuses.
+- Insufficient-at-sync rejection creates both the REJECTED transaction and an
+  OPEN shortfall row in the same batch transaction. The shortfall foreign key
+  therefore always references a transaction row. The member balance is not
+  modified.
+- `transactions.member_id` is NOT NULL. CARD_UNKNOWN items cannot create a
+  transaction row; the complete submitted item and its rejection result are
+  retained in `pending_sync_log.detail_json`. A transaction UUID conflict
+  likewise remains in detail_json and never inserts a second row.
+- Batch idempotency is scoped by (device_id, batch_uuid) and uses the persisted
+  `pending_sync_log.detail_json`; transaction idempotency is scoped by
+  `txn_uuid` and payload comparison.
+- The global member-cache version is stored in the arbitrary-key
+  `settings.member_cache_version` setting. It is independent of
+  `catalog_meta.version`; allowance refreshes and card-status changes bump it.
+- The sync batch limit is 50. The client is responsible for enforcing the
+  maximum local queue of 500 pending items; the server accepts batches only.

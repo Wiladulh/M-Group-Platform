@@ -1,0 +1,59 @@
+name: P13 Annotated Tag (temporary)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/p13-annotated-tag-temp.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  create-annotated-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create annotated tag and reference
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tagName = "v0.2-ws-binding";
+            const targetSha = "ef7d8ac10e6b10e004bebb1dbf1687ea21c96dd5";
+            const message = "P13 complete: background tasks (pending_dispense_monitor + admin_session_monitor), 4 loops registered, cache_version bump audited, REFUNDED status migration 0006. CI green: 218 passed, 91.23% coverage.";
+
+            try {
+              await github.rest.git.getRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: `tags/${tagName}`
+              });
+              throw new Error(`Ref refs/tags/${tagName} already exists; refusing to overwrite it.`);
+            } catch (error) {
+              if (error.status !== 404) throw error;
+            }
+
+            const tag = await github.rest.git.createTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag: tagName,
+              message,
+              object: targetSha,
+              type: "commit",
+              tagger: {
+                name: "mgroup-bot",
+                email: "mgroup-bot@users.noreply.github.com",
+                date: new Date().toISOString()
+              }
+            });
+
+            await github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: `refs/tags/${tagName}`,
+              sha: tag.data.sha
+            });
+
+            core.info(`Created annotated tag ${tagName}`);
+            core.info(`Tag object SHA: ${tag.data.sha}`);
+            core.info(`Target commit SHA: ${targetSha}`);
+            core.setOutput("tag_object_sha", tag.data.sha);

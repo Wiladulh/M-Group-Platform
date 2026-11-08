@@ -135,7 +135,7 @@ def test_pending_dispense_refund_after_2min(background_db):
                 Transaction.direction == "CREDIT",
             )
         ).all()
-        assert original.status == "REFUNDED"
+        assert original.status == "DISPENSE_FAILED"
         assert len(refunds) == 1
         assert session.get(Member, member_id).balance == 10_000
         assert any(event.member_id == member_id for event in published)
@@ -159,7 +159,7 @@ def test_pending_dispense_idempotent(background_db):
     assert asyncio.run(pending_dispense_monitor_once()) == 1
     assert asyncio.run(pending_dispense_monitor_once()) == 0
     with factory() as session:
-        assert session.get(Transaction, txn_id).status == "REFUNDED"
+        assert session.get(Transaction, txn_id).status == "DISPENSE_FAILED"
         assert session.get(Member, member_id).balance == 10_000
         assert (
             len(

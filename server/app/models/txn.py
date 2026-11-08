@@ -28,7 +28,7 @@ class Transaction(TimestampMixin, Base):
             name="ck_transactions_type",
         ),
         CheckConstraint(
-            "status IN ('COMPLETED', 'PENDING_DISPENSE', 'DISPENSE_FAILED', 'REFUNDED', 'REVERSED', 'REJECTED')",
+            "status IN ('COMPLETED', 'PENDING_DISPENSE', 'DISPENSE_FAILED', 'REVERSED', 'REJECTED')",
             name="ck_transactions_status",
         ),
         CheckConstraint(

@@ -435,14 +435,33 @@ class LedgerService:
         self._set_status(txn_id, "COMPLETED", {"PENDING_DISPENSE"})
 
     def fail_pending_dispense(self, txn_id: int, auto_refund: bool = True) -> Transaction:
+        """Mark a failed dispense and optionally create its linked full refund.
+
+        The original payment remains DISPENSE_FAILED; the balance restoration is
+        represented by a separate REFUND/CREDIT ledger transaction. A linked
+        refund already present is returned unchanged to keep retries idempotent.
+        """
         with self.session.begin():
             original = self.session.get(Transaction, txn_id)
-            if original is None or original.status != "PENDING_DISPENSE":
+            if original is None:
+                raise LedgerError("Transaction does not exist")
+
+            existing_refund = self.session.scalar(
+                select(Transaction).where(
+                    Transaction.ref_txn_id == original.id,
+                    Transaction.type == "REFUND",
+                    Transaction.direction == "CREDIT",
+                )
+            )
+            if existing_refund is not None:
+                return existing_refund
+
+            if original.status not in {"PENDING_DISPENSE", "DISPENSE_FAILED"}:
                 raise LedgerError("Transaction is not pending dispense")
+            original.status = "DISPENSE_FAILED"
             if not auto_refund:
-                original.status = "DISPENSE_FAILED"
                 return original
-            original.status = "REFUNDED"
+
             before, after = self._change_balance(original.member_id, original.amount, debit=False)
             row = self._insert(
                 txn_uuid=str(uuid4()),

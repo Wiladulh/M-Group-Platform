@@ -60,4 +60,4 @@ All four workers are created by the FastAPI lifespan and cancelled together duri
 | `pending_dispense_monitor_loop` | 30 s | Refund vending transactions still `PENDING_DISPENSE` more than 2 minutes after creation |
 | `admin_session_monitor_loop` | 60 s | Revoke administrator sessions whose expiry time has passed |
 
-The dispense worker rechecks the transaction status inside the ledger transaction before crediting a refund. It changes the original row to `REFUNDED` and creates one linked CREDIT/REFUND row atomically; repeated scans therefore cannot refund it twice. The admin-session worker updates only rows with `revoked_at IS NULL` and an expired `expires_at`, making repeated cycles safe.
+The dispense worker rechecks the transaction status inside the ledger transaction before crediting a refund. It changes the original row to `DISPENSE_FAILED` and creates one linked `REFUND` / `CREDIT` row atomically; repeated scans return the existing linked refund and do not credit the balance twice. The admin-session worker updates only rows with `revoked_at IS NULL` and an expired `expires_at`, making repeated cycles safe.

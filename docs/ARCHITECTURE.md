@@ -47,3 +47,17 @@ sequenceDiagram
 ```
 
 Binding supports NEW_CARD, REPLACE_CARD, and PIN_ONLY. The service owns the transactional state machine; P11 adds no admin router. P14 will expose the future `POST /admin/bind-sessions` endpoint.
+
+
+## Background task topology (P13)
+
+All four workers are created by the FastAPI lifespan and cancelled together during shutdown. The lifespan awaits all tasks with `asyncio.gather(..., return_exceptions=True)`.
+
+| Loop | Interval | Purpose |
+|---|---:|---|
+| `bind_expiry_loop` | 5 s | Expire abandoned remote card-binding sessions and send `bind.cancel` |
+| `offline_monitor_loop` | 10 s | Detect disconnected devices and process offline alerts |
+| `pending_dispense_monitor_loop` | 30 s | Refund vending transactions still `PENDING_DISPENSE` more than 2 minutes after creation |
+| `admin_session_monitor_loop` | 60 s | Revoke administrator sessions whose expiry time has passed |
+
+The dispense worker rechecks the transaction status inside the ledger transaction before crediting a refund. It changes the original row to `REFUNDED` and creates one linked CREDIT/REFUND row atomically; repeated scans therefore cannot refund it twice. The admin-session worker updates only rows with `revoked_at IS NULL` and an expired `expires_at`, making repeated cycles safe.

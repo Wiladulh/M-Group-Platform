@@ -439,9 +439,10 @@ class LedgerService:
             original = self.session.get(Transaction, txn_id)
             if original is None or original.status != "PENDING_DISPENSE":
                 raise LedgerError("Transaction is not pending dispense")
-            original.status = "DISPENSE_FAILED"
             if not auto_refund:
+                original.status = "DISPENSE_FAILED"
                 return original
+            original.status = "REFUNDED"
             before, after = self._change_balance(original.member_id, original.amount, debit=False)
             row = self._insert(
                 txn_uuid=str(uuid4()),

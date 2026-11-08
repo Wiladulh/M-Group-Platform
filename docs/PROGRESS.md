@@ -16,6 +16,7 @@
 | P10 | Authenticated device WebSocket, heartbeat, device events and event broadcast | DONE | 9af7106f209a63de37edd648f591767300b5ef23 |
 | P11 | Remote card binding state machine, PIN confirmation, command acknowledgements and expiry | DONE | 15bee0b1228b5ff67dcee23b8ca53d744eeaac78 |
 | P12 | Offline sync, rejected transaction audit rows, shortfall handling, member-cache endpoints and idempotency | DONE | a8347881e66f8034bb1e427de91b8863f0f56ded |
+| P13 | Automatic pending-dispense refunds, admin-session expiry, four lifespan workers and regression tests | IN PROGRESS | pending CI |
 
 ## Catatan
 - P0 hanya membuat dokumentasi; belum ada kode aplikasi, firmware, migrasi, atau konfigurasi runtime.
@@ -120,3 +121,11 @@
 - CI F4 (temporary formatter workflow removal): [run 42400925894](https://github.com/Wiladulh/M-Group-Platform/actions/runs/42400925894); Ruff SUCCESS, Pytest SUCCESS.
 - Ruff: all checks passed; 85 files already formatted. Temporary `.github/workflows/format.yml` removed.
 - Regression tests present: `test_sync_rejected_txn_row_created`, `test_sync_unknown_card_no_shortfall`, `test_verify_ledger_ignores_rejected`, and `test_sync_insufficient_creates_shortfall`.
+
+
+## P13 — Background tasks (implementation submitted; CI pending)
+
+- Added 30-second pending-dispense auto-refund and 60-second expired-admin-session revocation workers. Both expose one-cycle functions for deterministic tests and are registered with the existing 5-second bind-expiry and 10-second offline-monitor workers.
+- A stale dispense transaction is rechecked and atomically marked `REFUNDED` while a linked CREDIT/REFUND ledger row restores the member balance. Migration 0006 adds the final status to the database CHECK constraint.
+- Added regression coverage for the two-minute threshold, early transactions, refund idempotency, expired/active admin sessions, and registration/shutdown of all four lifespan tasks.
+- CI and coverage are intentionally pending; P13 remains IN PROGRESS until both required GitHub Actions jobs are verified green.

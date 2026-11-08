@@ -167,3 +167,12 @@
   `catalog_meta.version`; allowance refreshes and card-status changes bump it.
 - The sync batch limit is 50. The client is responsible for enforcing the
   maximum local queue of 500 pending items; the server accepts batches only.
+
+
+## P13 — Background tasks and automatic dispense refund
+
+- `pending_dispense_monitor_loop` runs every 30 seconds. It selects transactions with `status=PENDING_DISPENSE` and `created_at` older than two minutes. A stale transaction is rechecked under the ledger transaction and atomically changed to `REFUNDED` with one linked CREDIT/REFUND row. The status transition is the idempotency guard.
+- `admin_session_monitor_loop` runs every 60 seconds and sets `revoked_at` only for expired, not-yet-revoked sessions.
+- Both new workers catch cycle failures, preserve cancellation, and are lifespan-managed with the existing 5-second binding-expiry and 10-second offline-monitor workers. Shutdown cancels all four and awaits them with `return_exceptions=True`.
+- Added migration 0006 to extend the transaction status CHECK constraint with `REFUNDED`; existing statuses and ledger rows are preserved.
+- Cache-version mutation audit: card status changes in `binding.py`, `payment.py`, `topup.py`, and `sync.py` call `bump_member_cache_version`. `ledger.py` does not mutate card status; automatic refund changes transaction/member balance and allowance snapshots only. Allowance refresh already bumps member-cache version and publishes `CacheUpdateEvent`.

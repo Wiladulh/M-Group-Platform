@@ -1,6 +1,6 @@
 """FastAPI application entry point."""
 
-from contextlib import asynccontextmanager, suppress
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket
 from fastapi.exceptions import RequestValidationError
@@ -14,6 +14,8 @@ from app.routers.device import router as device_router
 from app.routers.payments import router as payments_router
 from app.routers.sync import router as sync_router
 from app.routers.topups import router as topups_router
+from app.services.admin_session_monitor import admin_session_monitor_loop
+from app.services.background_tasks import pending_dispense_monitor_loop
 from app.services.bind_expiry import bind_expiry_loop
 from app.services.events import (
     CacheInvalidateEvent,
@@ -40,17 +42,18 @@ async def lifespan(application: FastAPI):
     connection = engine.connect()
     application.state.database_connection = connection
     await broadcast_bus.start()
-    monitor = asyncio.create_task(offline_monitor_loop(application))
-    bind_expiry = asyncio.create_task(bind_expiry_loop(application))
+    background_tasks = [
+        asyncio.create_task(bind_expiry_loop(application)),
+        asyncio.create_task(offline_monitor_loop(application)),
+        asyncio.create_task(pending_dispense_monitor_loop(application)),
+        asyncio.create_task(admin_session_monitor_loop(application)),
+    ]
     try:
         yield
     finally:
-        monitor.cancel()
-        bind_expiry.cancel()
-        with suppress(asyncio.CancelledError):
-            await monitor
-        with suppress(asyncio.CancelledError):
-            await bind_expiry
+        for task in background_tasks:
+            task.cancel()
+        await asyncio.gather(*background_tasks, return_exceptions=True)
         await broadcast_bus.stop()
         connection.close()
         engine.dispose()

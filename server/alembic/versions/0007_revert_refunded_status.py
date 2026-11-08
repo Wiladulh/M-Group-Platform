@@ -14,9 +14,7 @@ depends_on = None
 
 def upgrade() -> None:
     # Revision 0006 may have persisted this non-spec status on original payments.
-    op.execute(
-        "UPDATE transactions SET status='DISPENSE_FAILED' WHERE status='REFUNDED'"
-    )
+    op.execute("UPDATE transactions SET status='DISPENSE_FAILED' WHERE status='REFUNDED'")
     with op.batch_alter_table("transactions", recreate="always") as batch_op:
         batch_op.drop_constraint("ck_transactions_status", type_="check")
         batch_op.create_check_constraint(

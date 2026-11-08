@@ -15,7 +15,7 @@ See: docs/ASSUMPTIONS.md A-P13-FIX1-01.
 """
 
 import ast
-from pathlib import Path
+import pathlib
 
 
 # Expected valid Transaction.status values per spec §5 and P13-FIX1.
@@ -30,7 +30,7 @@ TRANSACTION_STATUSES = {
 
 def _read_balance_statuses() -> tuple[str, ...]:
     """Read BALANCE_STATUSES without importing app.cli into coverage."""
-    cli_path = Path(__file__).parents[1] / "app" / "cli.py"
+    cli_path = pathlib.Path(__file__).parents[1] / "app" / "cli.py"
     module = ast.parse(cli_path.read_text(encoding="utf-8"))
 
     for node in module.body:

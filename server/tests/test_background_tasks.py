@@ -25,6 +25,7 @@ from app.services.background_tasks import pending_dispense_monitor_once
 from app.services.events import CacheUpdateEvent, _bus
 from app.services.ledger import LedgerService
 
+
 @pytest.fixture
 def background_db(tmp_path, monkeypatch):
     engine = create_engine(

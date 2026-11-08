@@ -5,6 +5,8 @@ from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
 import pytest
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import sessionmaker
 
 from app import db
 from app.main import app, lifespan
@@ -22,9 +24,6 @@ from app.services.admin_session_monitor import admin_session_monitor_once
 from app.services.background_tasks import pending_dispense_monitor_once
 from app.services.events import CacheUpdateEvent, _bus
 from app.services.ledger import LedgerService
-from sqlalchemy import create_engine, select
-from sqlalchemy.orm import sessionmaker
-
 
 @pytest.fixture
 def background_db(tmp_path, monkeypatch):

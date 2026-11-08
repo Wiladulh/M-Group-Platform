@@ -5,9 +5,6 @@ from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
 import pytest
-from sqlalchemy import create_engine, select
-from sqlalchemy.orm import sessionmaker
-
 from app import db
 from app.main import app, lifespan
 from app.models import (
@@ -24,6 +21,8 @@ from app.services.admin_session_monitor import admin_session_monitor_once
 from app.services.background_tasks import pending_dispense_monitor_once
 from app.services.events import CacheUpdateEvent, _bus
 from app.services.ledger import LedgerService
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import sessionmaker
 
 
 @pytest.fixture
@@ -149,9 +148,9 @@ def test_pending_dispense_not_refunded_before_2min(background_db):
     with factory() as session:
         assert session.get(Transaction, txn_id).status == "PENDING_DISPENSE"
         assert session.get(Member, member_id).balance == 8_000
-        assert session.scalar(
-            select(Transaction.id).where(Transaction.ref_txn_id == txn_id)
-        ) is None
+        assert (
+            session.scalar(select(Transaction.id).where(Transaction.ref_txn_id == txn_id)) is None
+        )
 
 
 def test_pending_dispense_idempotent(background_db):
@@ -162,14 +161,17 @@ def test_pending_dispense_idempotent(background_db):
     with factory() as session:
         assert session.get(Transaction, txn_id).status == "REFUNDED"
         assert session.get(Member, member_id).balance == 10_000
-        assert len(
-            session.scalars(
-                select(Transaction).where(
-                    Transaction.ref_txn_id == txn_id,
-                    Transaction.type == "REFUND",
-                )
-            ).all()
-        ) == 1
+        assert (
+            len(
+                session.scalars(
+                    select(Transaction).where(
+                        Transaction.ref_txn_id == txn_id,
+                        Transaction.type == "REFUND",
+                    )
+                ).all()
+            )
+            == 1
+        )
 
 
 def test_admin_session_monitor_revokes_expired(background_db):

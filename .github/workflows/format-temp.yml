@@ -1,0 +1,36 @@
+name: Format Temp
+on:
+  workflow_dispatch:
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install ruff
+        run: pip install ruff
+      - name: Run ruff check --fix
+        run: |
+          cd server
+          ruff check --fix . || true
+      - name: Run ruff format
+        run: |
+          cd server
+          ruff format . || true
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "P13-FIX1: apply ruff format (auto)"
+            git push
+          fi

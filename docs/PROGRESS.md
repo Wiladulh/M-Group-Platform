@@ -33,3 +33,19 @@
 - Scope: auth, layout, dashboard, member, top-up, transactions.
 - Deferred: Cashier/Vending/Products/Reports/Settings (P15).
 - Deferred: QRIS/Xendit (post-v1.3, see docs/ASSUMPTIONS.md A-P14-03).
+
+## P14-a — Frontend Foundation — DONE
+
+- Status: DONE. Semua checkpoint (CP1-CP5) selesai.
+- Branch: p14-a-cp1, merge commit 0a90ddc, HEAD 02eef762.
+- Tests: 224 passed (221 baseline + 3 smoke test).
+- Coverage: 91.11% (turun 0.09% dari 91.20% baseline; bukan regresi fungsional, hanya penambahan file test).
+- Ruff: clean (check + format).
+- Tailwind: v3.4.17 standalone CLI, pinned, tanpa CDN/Node. Build via temporary workflow.
+- Files: pyproject.toml (+jinja2), .gitignore (+binary), tailwind.config.js, input.css, app.css, app.js, base.html, main.py (mount static + Jinja2Templates + endpoint /), test_web.py.
+- Smoke tests: test_home_page, test_static_css, test_static_js.
+- Technical debt I001: tetap. Revisit P15.
+- Warning pre-existing (catat untuk P15):
+  - pytest-asyncio loop scope belum ditetapkan.
+  - Starlette httpx deprecation warning di testclient.
+- Out of scope P14-a (deferred): auth, dashboard, member, topup, transactions, RBAC, QRIS/Xendit, vendor libraries (HTMX/Alpine/Chart.js).

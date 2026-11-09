@@ -176,3 +176,45 @@
 - Both new workers catch cycle failures, preserve cancellation, and are lifespan-managed with the existing 5-second binding-expiry and 10-second offline-monitor workers. Shutdown cancels all four and awaits them with `return_exceptions=True`.
 - Added migration 0006 to extend the transaction status CHECK constraint with `REFUNDED`; existing statuses and ledger rows are preserved.
 - Cache-version mutation audit: card status changes in `binding.py`, `payment.py`, `topup.py`, and `sync.py` call `bump_member_cache_version`. `ledger.py` does not mutate card status; automatic refund changes transaction/member balance and allowance snapshots only. Allowance refresh already bumps member-cache version and publishes `CacheUpdateEvent`.
+
+## A-P13-FIX1-01: REFUNDED status superseded
+
+- Date: 2026-11-08
+- Decision: Transaction status `REFUNDED` is not valid per spec §5.
+  Refunds are separate `REFUND` ledger rows (type=`REFUND`, direction=`CREDIT`);
+  original payment becomes `DISPENSE_FAILED` (if dispense failed) or stays
+  `COMPLETED` (if reversal was for another reason and handled via ADJUSTMENT).
+- Supersedes: prior assumption that `REFUNDED` was a valid transaction status.
+- See: P13-FIX1, spec §5.
+
+## A-P14-01: Single admin, no RBAC
+
+- Date: 2026-11-08
+- Decision: WebUI has exactly ONE admin account (spec §4.1, §14.2, Decision #21).
+  No roles, no staff accounts, no `operator_permissions` table.
+  "Operator" is a Cashier-keypad identity (Operator Code + 6-digit PIN), not a
+  WebUI user.
+- Rationale: spec v1.3 mandates single admin. Earlier chat scope with
+  ADMIN/OPERATOR roles and granular permissions was reverted before any code
+  was written.
+
+## A-P14-02: Setup wizard not needed
+
+- Date: 2026-11-08
+- Decision: Admin is created via `python -m app.cli seed-minimal` from env
+  `ADMIN_USERNAME` / `ADMIN_PASSWORD` with `must_change_password=True`.
+  No first-run `/setup` wizard. Forced password change on first login via
+  `/admin/settings/password` (spec §14.5).
+- See: spec §4.1, §14.5.
+
+## A-P14-03: QRIS / Xendit deferred to post-v1.3
+
+- Date: 2026-11-08
+- Decision: QRIS manual page and Xendit integration are OUT OF SCOPE for v1.3
+  (spec Decision #19: "Out of scope v1.3: QRIS/cash, OTA, multi-branch, mobile
+  app, shift-register driver, automatic debt, Admin API Token").
+  They will be developed AFTER the server is built, tested live, and operational,
+  as a separate phase requiring spec amendment to v1.4+.
+- Rationale: spec is the binding SSoT. Adding QRIS/Xendit now would violate it
+  and expand scope beyond Section 14.
+

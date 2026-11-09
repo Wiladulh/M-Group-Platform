@@ -5,7 +5,7 @@ import logging
 from contextlib import suppress
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import or_, select, update
 from sqlalchemy.exc import SQLAlchemyError
 
 from app import db
@@ -16,6 +16,21 @@ from app.ws.connection_manager import manager
 from app.ws.heartbeat import heartbeat
 
 logger = logging.getLogger(__name__)
+
+
+def _claim_offline_alert(session, event_id: int) -> bool:
+    """Atomically claim an OFFLINE event so concurrent monitors cannot alert twice."""
+    result = session.execute(
+        update(DeviceEvent)
+        .where(
+            DeviceEvent.id == event_id,
+            or_(DeviceEvent.detail.is_(None), DeviceEvent.detail != "alert_fired"),
+        )
+        .values(detail="alert_fired")
+        .execution_options(synchronize_session=False)
+    )
+    session.commit()
+    return result.rowcount == 1
 
 
 async def offline_monitor_once(app) -> None:
@@ -55,10 +70,8 @@ async def offline_monitor_once(app) -> None:
                     .order_by(DeviceEvent.at.desc())
                     .limit(1)
                 )
-                if opened is not None and opened.detail != "alert_fired":
+                if opened is not None and _claim_offline_alert(session, opened.id):
                     fire_device_offline(device, device.last_seen_at)
-                    opened.detail = "alert_fired"
-            session.commit()
         except SQLAlchemyError:
             logger.debug("offline_monitor_database_not_ready", exc_info=True)
             session.rollback()

@@ -1,24 +1,8 @@
-"""Regression guard: BALANCE_STATUSES must not contain REFUNDED.
-
-Context: P13-FIX1 reverted the `REFUNDED` transaction status. Refunds are
-now separate `REFUND` ledger rows, not a status on the payment transaction.
-`cli.py` retained a stale `REFUNDED` entry in `BALANCE_STATUSES`, which
-caused `verify-ledger` to include a status that cannot exist in the model.
-
-This test is a MINIMAL REGRESSION GUARD. It hardcodes the expected valid
-status set instead of reading it from the Transaction model constraint.
-A future improvement (P15+) should read the constraint directly from the
-model so this test stays in sync if new statuses are added. An earlier
-attempt to read `cli.py` via AST was reverted because it triggered a
-Ruff I001 issue with the repository's current Ruff/isort setup.
-
-See: docs/ASSUMPTIONS.md A-P13-FIX1-01.
-"""
+"""Regression guard for BALANCE_STATUSES against spec §5."""
 
 from app.cli import BALANCE_STATUSES
+from app.models.txn import Transaction
 
-
-# Expected valid Transaction.status values per spec §5 and P13-FIX1.
 TRANSACTION_STATUSES = {
     "COMPLETED",
     "PENDING_DISPENSE",
@@ -47,3 +31,14 @@ def test_refunded_not_in_balance_statuses():
         "ledger rows, not a payment status). Do not re-add it. "
         "See docs/ASSUMPTIONS.md A-P13-FIX1-01."
     )
+
+
+def test_transaction_model_importable():
+    """Sanity: Transaction model is importable and has expected statuses covered.
+
+    This test does NOT read constraint from Transaction; it only verifies
+    that the module import works and that the model class exists. The
+    hardcoded TRANSACTION_STATUSES set above remains the source of truth
+    for spec §5 statuses until P15+ refactor reads the constraint directly.
+    """
+    assert Transaction is not None

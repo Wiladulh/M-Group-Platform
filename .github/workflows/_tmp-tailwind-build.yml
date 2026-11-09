@@ -49,7 +49,7 @@ jobs:
             }
             END {
               if (matches != 1) {
-                printf "Expected exactly one checksum entry; found %d\\n", matches
+                printf "Expected exactly one checksum entry; found %d\n", matches
                 exit 1
               }
             }

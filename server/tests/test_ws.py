@@ -1,7 +1,9 @@
 """Real TestClient WebSocket handshake, lifecycle, broadcast, and heartbeat tests."""
 
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
+from threading import Barrier
 
 import httpx
 import pytest
@@ -11,6 +13,7 @@ from app.main import app
 from app.models import Base, Device, DeviceEvent
 from app.security.device_token import generate_device_token, hash_device_token
 from app.services.events import CacheUpdateEvent, CardStatusChangedEvent, _bus
+from app.services import offline_monitor
 from app.services.offline_monitor import offline_monitor_once
 from app.ws.connection_manager import manager
 from app.ws.heartbeat import heartbeat
@@ -337,5 +340,75 @@ def test_no_pin_or_token_in_logs(tmp_path, monkeypatch, caplog):
             ws.receive_json()
         assert token not in caplog.text
         assert "CSH-WS" in caplog.text or caplog.text == ""
+    finally:
+        engine.dispose()
+
+
+
+def test_concurrent_offline_monitors_send_one_webhook(tmp_path, monkeypatch):
+    engine, factory = _database(tmp_path, monkeypatch)
+    old = datetime.now(UTC) - timedelta(minutes=5)
+    with factory.begin() as session:
+        device = Device(
+            device_id="CSH-ALERT-RACE",
+            name="Alert race",
+            type="cashier",
+            token_hash=hash_device_token(generate_device_token()),
+            status="ACTIVE",
+            last_seen_at=old,
+            ws_connected=False,
+        )
+        session.add(device)
+        session.flush()
+        session.add(DeviceEvent(device_id=device.id, event="OFFLINE", at=old, duration_s=None))
+
+    monkeypatch.setattr(get_settings(), "alert_webhook_url", "https://alerts.example/hook")
+    calls = []
+
+    class FakeAsyncClient:
+        def __init__(self, timeout):
+            self.timeout = timeout
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return None
+
+        async def post(self, url, json):
+            calls.append((url, json))
+
+    monkeypatch.setattr(httpx, "AsyncClient", FakeAsyncClient)
+
+    # Force both monitor invocations to reach the claim at the same time,
+    # after each has selected the same open OFFLINE event.
+    claim_barrier = Barrier(2)
+    original_claim = offline_monitor._claim_offline_alert
+
+    def synchronized_claim(session, event_id):
+        claim_barrier.wait(timeout=5)
+        return original_claim(session, event_id)
+
+    monkeypatch.setattr(offline_monitor, "_claim_offline_alert", synchronized_claim)
+
+    async def run_monitor():
+        await offline_monitor_once(None)
+        await asyncio.sleep(0.02)
+
+    try:
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            futures = [executor.submit(asyncio.run, run_monitor()) for _ in range(2)]
+            for future in futures:
+                future.result(timeout=10)
+
+        assert len(calls) == 1
+        assert calls[0][0] == "https://alerts.example/hook"
+        assert calls[0][1]["event"] == "offline"
+        assert calls[0][1]["device"] == "CSH-ALERT-RACE"
+        with factory() as session:
+            event = session.scalar(
+                select(DeviceEvent).where(DeviceEvent.device_id == Device.id)
+            )
+            assert event is None
     finally:
         engine.dispose()

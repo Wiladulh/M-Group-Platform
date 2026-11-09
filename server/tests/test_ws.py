@@ -357,9 +357,7 @@ def test_offline_alert_claim_is_idempotent(tmp_path, monkeypatch):
         )
         session.add(device)
         session.flush()
-        event = DeviceEvent(
-            device_id=device.id, event="OFFLINE", at=old, duration_s=None
-        )
+        event = DeviceEvent(device_id=device.id, event="OFFLINE", at=old, duration_s=None)
         session.add(event)
         session.flush()
         event_id = event.id

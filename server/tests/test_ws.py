@@ -10,8 +10,8 @@ from app.config import get_settings
 from app.main import app
 from app.models import Base, Device, DeviceEvent
 from app.security.device_token import generate_device_token, hash_device_token
-from app.services.events import CacheUpdateEvent, CardStatusChangedEvent, _bus
 from app.services import offline_monitor
+from app.services.events import CacheUpdateEvent, CardStatusChangedEvent, _bus
 from app.services.offline_monitor import offline_monitor_once
 from app.ws.connection_manager import manager
 from app.ws.heartbeat import heartbeat
@@ -342,8 +342,6 @@ def test_no_pin_or_token_in_logs(tmp_path, monkeypatch, caplog):
         engine.dispose()
 
 
-
-
 def test_offline_alert_claim_is_idempotent(tmp_path, monkeypatch):
     engine, factory = _database(tmp_path, monkeypatch)
     old = datetime.now(UTC) - timedelta(minutes=5)
@@ -359,7 +357,9 @@ def test_offline_alert_claim_is_idempotent(tmp_path, monkeypatch):
         )
         session.add(device)
         session.flush()
-        event = DeviceEvent(device_id=device.id, event="OFFLINE", at=old, duration_s=None)
+        event = DeviceEvent(
+            device_id=device.id, event="OFFLINE", at=old, duration_s=None
+        )
         session.add(event)
         session.flush()
         event_id = event.id

@@ -9,6 +9,7 @@ __pycache__/
 .env.local
 server/data/
 server/static/vendor/
+server/tools/tailwindcss
 .DS_Store
 .idea/
 .vscode/

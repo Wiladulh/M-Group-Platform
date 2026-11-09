@@ -1,10 +1,13 @@
 """FastAPI application entry point."""
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
 from app.config import get_settings
 from app.db import engine
@@ -68,6 +71,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+BASE_DIR = Path(__file__).resolve().parent
+app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
+templates = Jinja2Templates(directory=BASE_DIR / "templates")
+
 
 @app.exception_handler(DomainError)
 async def domain_error_handler(_request: Request, exc: DomainError):
@@ -128,6 +135,12 @@ def healthz() -> dict[str, str]:
 @app.websocket("/ws/device")
 async def ws_device(websocket: WebSocket):
     await ws_device_endpoint(websocket)
+
+
+@app.get("/")
+async def home(request: Request):
+    """Render the application home page."""
+    return templates.TemplateResponse(request, "base.html", {})
 
 
 def _broadcast_domain_event(event):

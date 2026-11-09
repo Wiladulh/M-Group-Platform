@@ -406,9 +406,8 @@ def test_concurrent_offline_monitors_send_one_webhook(tmp_path, monkeypatch):
         assert calls[0][1]["event"] == "offline"
         assert calls[0][1]["device"] == "CSH-ALERT-RACE"
         with factory() as session:
-            event = session.scalar(
-                select(DeviceEvent).where(DeviceEvent.device_id == Device.id)
-            )
-            assert event is None
+            events = session.scalars(select(DeviceEvent)).all()
+            assert len(events) == 1
+            assert events[0].detail == "alert_fired"
     finally:
         engine.dispose()

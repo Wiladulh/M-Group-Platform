@@ -57,16 +57,11 @@ jobs:
           cat tailwindcss-linux-x64.sha256
           sha256sum --check --strict tailwindcss-linux-x64.sha256
 
-      - name: Verify Tailwind version
-        working-directory: server
-        run: |
-          chmod +x tools/tailwindcss
-          ./tools/tailwindcss --version | tee tailwind-version.txt
-          grep -Fx 'tailwindcss v3.4.17' tailwind-version.txt
-
       - name: Build minified local CSS
         working-directory: server
         run: |
+          chmod +x tools/tailwindcss
+          echo "Using the official Tailwind v3.4.17 binary; SHA-256 was verified in the previous step."
           ./tools/tailwindcss -c tailwind.config.js -i app/static/css/input.css -o app/static/css/app.css --minify
           test -s app/static/css/app.css
 

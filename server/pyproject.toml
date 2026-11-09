@@ -21,6 +21,7 @@ dependencies = [
     "openpyxl",
     "python-multipart",
     "python-dotenv",
+    "jinja2",
 ]
 
 [project.optional-dependencies]

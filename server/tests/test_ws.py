@@ -10,6 +10,7 @@ from app.config import get_settings
 from app.main import app
 from app.models import Base, Device, DeviceEvent
 from app.security.device_token import generate_device_token, hash_device_token
+from app.services import offline_monitor
 from app.services.events import CacheUpdateEvent, CardStatusChangedEvent, _bus
 from app.services.offline_monitor import offline_monitor_once
 from app.ws.connection_manager import manager
@@ -337,5 +338,38 @@ def test_no_pin_or_token_in_logs(tmp_path, monkeypatch, caplog):
             ws.receive_json()
         assert token not in caplog.text
         assert "CSH-WS" in caplog.text or caplog.text == ""
+    finally:
+        engine.dispose()
+
+
+def test_offline_alert_claim_is_idempotent(tmp_path, monkeypatch):
+    engine, factory = _database(tmp_path, monkeypatch)
+    old = datetime.now(UTC) - timedelta(minutes=5)
+    with factory.begin() as session:
+        device = Device(
+            device_id="CSH-ALERT-CLAIM",
+            name="Alert claim",
+            type="cashier",
+            token_hash=hash_device_token(generate_device_token()),
+            status="ACTIVE",
+            last_seen_at=old,
+            ws_connected=False,
+        )
+        session.add(device)
+        session.flush()
+        event = DeviceEvent(device_id=device.id, event="OFFLINE", at=old, duration_s=None)
+        session.add(event)
+        session.flush()
+        event_id = event.id
+
+    try:
+        with factory() as first_session:
+            assert offline_monitor._claim_offline_alert(first_session, event_id) is True
+        with factory() as second_session:
+            assert offline_monitor._claim_offline_alert(second_session, event_id) is False
+        with factory() as session:
+            claimed = session.get(DeviceEvent, event_id)
+            assert claimed is not None
+            assert claimed.detail == "alert_fired"
     finally:
         engine.dispose()

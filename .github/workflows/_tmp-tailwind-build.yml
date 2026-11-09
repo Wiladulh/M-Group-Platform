@@ -35,9 +35,27 @@ jobs:
       - name: Verify official SHA-256 checksum
         working-directory: server
         run: |
-          grep -E '^[[:xdigit:]]{64}  tailwindcss-linux-x64$' sha256sums.txt > tailwindcss-linux-x64.sha256
-          test "$(wc -l < tailwindcss-linux-x64.sha256)" -eq 1
-          sed 's#tailwindcss-linux-x64#tools/tailwindcss#' tailwindcss-linux-x64.sha256 | sha256sum --check --strict
+          echo "Checksum file entries:"
+          sed -n '1,20p' sha256sums.txt
+          awk '
+            {
+              filename = $2
+              sub(/\r$/, "", filename)
+              sub(/^\.\//, "", filename)
+              if (filename == "tailwindcss-linux-x64") {
+                print $1 "  tools/tailwindcss"
+                matches++
+              }
+            }
+            END {
+              if (matches != 1) {
+                printf "Expected exactly one checksum entry; found %d\\n", matches
+                exit 1
+              }
+            }
+          ' sha256sums.txt > tailwindcss-linux-x64.sha256
+          cat tailwindcss-linux-x64.sha256
+          sha256sum --check --strict tailwindcss-linux-x64.sha256
 
       - name: Verify Tailwind version
         working-directory: server

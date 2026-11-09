@@ -37,7 +37,7 @@
 ## P14-a — Frontend Foundation — DONE
 
 - Status: DONE. Semua checkpoint (CP1-CP5) selesai.
-- Branch: p14-a-cp1, merge commit 0a90ddc, HEAD 02eef762.
+- Branch: p14-a-cp1. Commit terakhir sebelum merge: c6b8a9c; merge commit: a42c25e.
 - Tests: 224 passed (221 baseline + 3 smoke test).
 - Coverage: 91.11% (turun 0.09% dari 91.20% baseline; bukan regresi fungsional, hanya penambahan file test).
 - Ruff: clean (check + format).

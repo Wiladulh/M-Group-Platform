@@ -20,6 +20,11 @@ class Settings(BaseSettings):
     alert_webhook_url: str = ""
     database_url: str = "sqlite:///./mgroup.db"
 
+    session_cookie_name: str = "mg_admin_session"
+    secure_cookies: bool = False
+    login_rate_limit_attempts: int = 5
+    login_rate_limit_window_minutes: int = 15
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

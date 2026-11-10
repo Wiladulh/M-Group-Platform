@@ -1,6 +1,8 @@
 name: _tmp-p14b1-verify
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - p14-b-cp1
 
 permissions:
   contents: read

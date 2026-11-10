@@ -1,0 +1,58 @@
+name: _tmp-p14b1-verify
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/p14-b-cp1'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: p14-b-cp1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Migration from empty DB (isolated)
+        run: |
+          rm -f /tmp/p14b1-migration-test.db
+          DATABASE_URL=sqlite:////tmp/p14b1-migration-test.db alembic upgrade head
+          echo "=== TABLES ==="
+          python -c "
+          import sqlite3
+          conn = sqlite3.connect('/tmp/p14b1-migration-test.db')
+          rows = conn.execute(\"SELECT name FROM sqlite_master WHERE type='table' ORDER BY name\").fetchall()
+          for r in rows: print(r[0])
+          print('=== INDEXES on login_attempts ===')
+          idx = conn.execute(\"SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='login_attempts'\").fetchall()
+          for r in idx: print(r[0])
+          print('=== SCHEMA ===')
+          schema = conn.execute(\"SELECT sql FROM sqlite_master WHERE type='table' AND name='login_attempts'\").fetchone()
+          print(schema[0] if schema else 'NOT FOUND')
+          conn.close()
+          "
+
+      - name: Pytest test_login_attempt.py
+        run: pytest tests/test_login_attempt.py -v
+
+      - name: Pytest full suite
+        run: pytest -v --cov=app --cov-report=term-missing
+
+      - name: Ruff check
+        run: ruff check app/ tests/
+
+      - name: Ruff format check
+        run: ruff format --check app/ tests/

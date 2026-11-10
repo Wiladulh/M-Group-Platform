@@ -51,7 +51,8 @@ jobs:
           "
 
       - name: Pytest test_login_attempt.py
-        run: pytest tests/test_login_attempt.py -v
+        # Run focused tests without the repository-wide coverage threshold.
+        run: pytest -o addopts='' tests/test_login_attempt.py -v
 
       - name: Pytest full suite
         run: pytest -v --cov=app --cov-report=term-missing

@@ -1,10 +1,10 @@
 """Tests for the login_attempts ORM model and lookup index."""
 
 import pytest
-from sqlalchemy import create_engine, inspect, select
-from sqlalchemy.orm import sessionmaker
 
 from app.models import Base, LoginAttempt
+from sqlalchemy import create_engine, inspect, select
+from sqlalchemy.orm import sessionmaker
 
 
 @pytest.fixture

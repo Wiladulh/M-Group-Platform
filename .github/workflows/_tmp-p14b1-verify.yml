@@ -9,6 +9,9 @@ permissions:
 
 jobs:
   verify:
+    env:
+      # Ephemeral, non-production key used only to validate CI migrations/tests.
+      DATA_KEY: "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="
     if: github.ref == 'refs/heads/p14-b-cp1'
     runs-on: ubuntu-latest
     defaults:

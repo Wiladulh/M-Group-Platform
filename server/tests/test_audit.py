@@ -6,11 +6,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
 
 from app.models.base import Base
 from app.services.audit import log_admin_action
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
 
 
 @pytest.fixture

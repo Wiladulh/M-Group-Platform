@@ -1,15 +1,14 @@
 """Tests for admin audit log helper."""
 
 import json
+from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Iterator
 
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.models.audit import AuditLog
 from app.models.base import Base
 from app.services.audit import log_admin_action
 

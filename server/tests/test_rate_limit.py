@@ -1,8 +1,8 @@
 """Tests for login rate limiting helpers."""
 
+from collections.abc import Iterator
 from datetime import timedelta
 from pathlib import Path
-from typing import Iterator
 
 import pytest
 from sqlalchemy import create_engine

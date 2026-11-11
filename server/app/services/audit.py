@@ -1,10 +1,18 @@
 """Admin audit log helper."""
 
 import json
+from datetime import datetime
 
 from sqlalchemy.orm import Session
 
 from app.models.audit import AuditLog
+
+
+def _json_default(value: object) -> str:
+    """Serialize datetimes as ISO 8601 and other unsupported values as strings."""
+    if isinstance(value, datetime):
+        return value.isoformat()
+    return str(value)
 
 
 def log_admin_action(
@@ -24,8 +32,8 @@ def log_admin_action(
         action=action,
         entity=entity,
         entity_id=entity_id,
-        before_json=json.dumps(before, default=str) if before is not None else None,
-        after_json=json.dumps(after, default=str) if after is not None else None,
+        before_json=json.dumps(before, default=_json_default) if before is not None else None,
+        after_json=json.dumps(after, default=_json_default) if after is not None else None,
         ip=ip,
     )
     db.add(row)

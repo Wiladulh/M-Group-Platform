@@ -1,8 +1,8 @@
 """Tests for admin session lifecycle helpers."""
 
+from collections.abc import Iterator
 from datetime import UTC, timedelta
 from pathlib import Path
-from typing import Iterator
 
 import pytest
 from sqlalchemy import create_engine

@@ -5,6 +5,9 @@ from datetime import UTC, timedelta
 from pathlib import Path
 
 import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.models.admin import AdminSession, AdminUser
 from app.models.base import Base, utc_now
@@ -16,10 +19,6 @@ from app.services.admin_auth import (
     revoke_other_sessions,
     touch_admin_session,
 )
-
-from sqlalchemy import create_engine
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session, sessionmaker
 
 
 @pytest.fixture

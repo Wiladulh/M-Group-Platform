@@ -238,12 +238,15 @@ def test_sync_unknown_card_no_shortfall(sync_db):
 
 def test_sync_idempotent_same_txn_uuid(sync_db):
     _, factory, device_id, member_id, _ = sync_db
+    offline_ts = int(datetime.now(UTC).timestamp()) - 5
+    first_batch = _batch(batch_uuid="first-batch", offline_ts=offline_ts)
+    second_batch = _batch(batch_uuid="second-batch", offline_ts=offline_ts)
     with factory() as session:
         device = SimpleNamespace(id=device_id, device_id="CSH-001", type="cashier")
-        SyncService(session).process_batch(device, _batch(batch_uuid="first-batch"))
+        SyncService(session).process_batch(device, first_batch)
     with factory() as session:
         device = SimpleNamespace(id=device_id, device_id="CSH-001", type="cashier")
-        response = SyncService(session).process_batch(device, _batch(batch_uuid="second-batch"))
+        response = SyncService(session).process_batch(device, second_batch)
         assert response.results[0].status == "DUPLICATE"
     with factory() as session:
         assert session.get(Member, member_id).balance == 5_000

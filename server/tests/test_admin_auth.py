@@ -22,7 +22,6 @@ from app.services.admin_auth import (
 )
 
 
-
 @pytest.fixture
 def db_session(tmp_path: Path) -> Iterator[Session]:
     engine = create_engine(f"sqlite:///{tmp_path / 'admin-auth-test.db'}")

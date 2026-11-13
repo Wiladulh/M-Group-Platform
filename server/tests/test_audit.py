@@ -14,7 +14,6 @@ from app.models.base import Base
 from app.services.audit import log_admin_action
 
 
-
 @pytest.fixture
 def db_session(tmp_path: Path) -> Iterator[Session]:
     engine = create_engine(f"sqlite:///{tmp_path / 'audit-test.db'}")

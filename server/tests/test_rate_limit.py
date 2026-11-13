@@ -14,7 +14,6 @@ from app.models.login_attempt import LoginAttempt
 from app.services.rate_limit import check_login_rate_limit, record_login_attempt
 
 
-
 @pytest.fixture
 def db_session(tmp_path: Path) -> Iterator[Session]:
     engine = create_engine(f"sqlite:///{tmp_path / 'rate-limit-test.db'}")

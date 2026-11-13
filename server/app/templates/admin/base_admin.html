@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>M-Group Admin</title><script src="https://cdn.tailwindcss.com"></script><script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script></head>
+<body class="min-h-screen bg-slate-100 text-slate-900"><header class="flex justify-between bg-slate-900 p-4 text-white"><a href="/admin">M-Group Platform</a><span>{{ user.display_name if user else "Administrator" }}</span></header>
+<div class="mx-auto flex max-w-7xl"><aside class="w-56 bg-white p-4"><nav class="space-y-1">
+{% for label, href, key in [("Dashboard","/admin","dashboard"),("Members","/admin/members","members"),("Cards","/admin/cards","cards"),("Products","/admin/products","products"),("Devices","/admin/devices","devices"),("Transactions","/admin/transactions","transactions"),("Settings","/admin/settings/password","settings"),("Sessions","/admin/settings/sessions","sessions")] %}
+<a class="block rounded px-3 py-2 {% if active == key %}bg-slate-900 text-white{% else %}hover:bg-slate-100{% endif %}" href="{{ href }}">{{ label }}</a>{% endfor %}
+</nav><form method="post" action="/admin/logout" class="mt-8"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="rounded border px-3 py-2">Logout</button></form></aside>
+<main class="min-w-0 flex-1 p-6">{% block content %}<h1 class="text-2xl font-semibold">{{ content or "Admin" }}</h1>{% endblock %}</main></div></body></html>

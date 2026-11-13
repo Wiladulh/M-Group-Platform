@@ -5,7 +5,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -17,6 +17,7 @@ from app.routers.device import router as device_router
 from app.routers.payments import router as payments_router
 from app.routers.sync import router as sync_router
 from app.routers.topups import router as topups_router
+from app.routers.web import router as web_router
 from app.services.admin_session_monitor import admin_session_monitor_loop
 from app.services.background_tasks import pending_dispense_monitor_loop
 from app.services.bind_expiry import bind_expiry_loop
@@ -139,8 +140,10 @@ async def ws_device(websocket: WebSocket):
 
 @app.get("/")
 async def home(request: Request):
-    """Render the application home page."""
-    return templates.TemplateResponse(request, "base.html", {})
+    """Redirect the browser to the authenticated admin area or login."""
+    settings = get_settings()
+    destination = "/admin" if request.cookies.get(settings.session_cookie_name) else "/admin/login"
+    return RedirectResponse(destination, status_code=303)
 
 
 def _broadcast_domain_event(event):
@@ -184,3 +187,4 @@ app.include_router(device_router)
 app.include_router(payments_router)
 app.include_router(sync_router)
 app.include_router(topups_router)
+app.include_router(web_router)

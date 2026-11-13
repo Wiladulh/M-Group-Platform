@@ -5,19 +5,19 @@ from collections.abc import Iterator
 from datetime import timedelta
 
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, select
-from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.pool import StaticPool
-from argon2 import PasswordHasher
-
+from app.config import get_settings
 from app.db import get_session
 from app.main import app
 from app.models import AdminSession, AdminUser, Base, LoginAttempt
 from app.models.base import utc_now
-from app.security.csrf import generate_csrf_token
+from app.security.session_token import hash_session_token
 from app.services.admin_auth import create_admin_session
-from app.config import get_settings
+
+from argon2 import PasswordHasher
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 
 @pytest.fixture
@@ -158,9 +158,9 @@ def test_session_sliding_refreshes_expiry(web_client, admin_user):
     client, factory = web_client
     token = _authenticated_cookie(client, factory, admin_user)
     db = factory()
-    session = db.scalar(select(AdminSession).where(
-        AdminSession.session_hash == __import__("app.security.session_token", fromlist=["hash_session_token"]).hash_session_token(token)
-    ))
+    session = db.scalar(
+        select(AdminSession).where(AdminSession.session_hash == hash_session_token(token))
+    )
     session.last_seen_at = utc_now() - timedelta(hours=1)
     session.expires_at = utc_now() + timedelta(minutes=1)
     db.commit()
@@ -178,8 +178,9 @@ def test_expired_session_redirects_to_login(web_client, admin_user):
     client, factory = web_client
     token = _authenticated_cookie(client, factory, admin_user)
     db = factory()
-    from app.security.session_token import hash_session_token
-    session = db.scalar(select(AdminSession).where(AdminSession.session_hash == hash_session_token(token)))
+    session = db.scalar(
+        select(AdminSession).where(AdminSession.session_hash == hash_session_token(token))
+    )
     session.expires_at = utc_now() - timedelta(minutes=1)
     db.commit()
     db.close()
@@ -198,8 +199,9 @@ def test_logout_revokes_current_session(web_client, admin_user):
     )
     assert response.status_code == 303
     db = factory()
-    from app.security.session_token import hash_session_token
-    session = db.scalar(select(AdminSession).where(AdminSession.session_hash == hash_session_token(token)))
+    session = db.scalar(
+        select(AdminSession).where(AdminSession.session_hash == hash_session_token(token))
+    )
     assert session.revoked_at is not None
     db.close()
 

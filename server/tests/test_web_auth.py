@@ -131,7 +131,7 @@ def test_login_rate_limit_blocks_sixth_failure(web_client):
 def test_login_rejects_missing_csrf(web_client):
     client, _ = web_client
     response = client.post("/admin/login", data={"username": "admin", "password": "x"})
-    assert response.status_code == 422
+    assert response.status_code == 400
 
 
 def test_admin_route_requires_session(web_client):

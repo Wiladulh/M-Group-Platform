@@ -5,10 +5,11 @@ from datetime import timedelta
 from pathlib import Path
 
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
 
 from app.models.base import Base, utc_now
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
 from app.models.login_attempt import LoginAttempt
 from app.services.rate_limit import check_login_rate_limit, record_login_attempt
 

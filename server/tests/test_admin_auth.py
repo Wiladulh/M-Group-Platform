@@ -5,11 +5,12 @@ from datetime import UTC, timedelta
 from pathlib import Path
 
 import pytest
+
+from app.models.admin import AdminSession, AdminUser
+
 from sqlalchemy import create_engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
-
-from app.models.admin import AdminSession, AdminUser
 from app.models.base import Base, utc_now
 from app.security.session_token import hash_session_token
 from app.services.admin_auth import (

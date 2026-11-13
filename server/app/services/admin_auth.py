@@ -56,9 +56,7 @@ def revoke_admin_session(db: Session, session: AdminSession) -> None:
     db.add(session)
 
 
-def revoke_other_sessions(
-    db: Session, user: AdminUser, keep_session: AdminSession
-) -> int:
+def revoke_other_sessions(db: Session, user: AdminUser, keep_session: AdminSession) -> int:
     """Revoke every unrevoked session for the user except the supplied session."""
     sessions = db.scalars(
         select(AdminSession).where(

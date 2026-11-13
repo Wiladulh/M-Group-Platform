@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./mgroup.db"
 
     session_cookie_name: str = "mg_admin_session"
+    session_idle_minutes: int = 1440
     secure_cookies: bool = False
     login_rate_limit_attempts: int = 5
     login_rate_limit_window_minutes: int = 15

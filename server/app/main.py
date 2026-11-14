@@ -5,9 +5,8 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 
 from app.config import get_settings
 from app.db import engine
@@ -74,7 +73,6 @@ app = FastAPI(
 
 BASE_DIR = Path(__file__).resolve().parent
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
-templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 
 @app.exception_handler(DomainError)
@@ -136,14 +134,6 @@ def healthz() -> dict[str, str]:
 @app.websocket("/ws/device")
 async def ws_device(websocket: WebSocket):
     await ws_device_endpoint(websocket)
-
-
-@app.get("/")
-async def home(request: Request):
-    """Redirect the browser to the authenticated admin area or login."""
-    settings = get_settings()
-    destination = "/admin" if request.cookies.get(settings.session_cookie_name) else "/admin/login"
-    return RedirectResponse(destination, status_code=303)
 
 
 def _broadcast_domain_event(event):

@@ -15,7 +15,8 @@ from starlette.templating import Jinja2Templates
 from app.config import get_settings
 from app.db import get_session
 from app.dependencies.admin import require_admin
-from app.models import AuditLog, Device, Member, Transaction\nfrom app.models.admin import AdminSession, AdminUser
+from app.models import AuditLog, Device, Member, Transaction
+from app.models.admin import AdminSession, AdminUser
 from app.security.csrf import generate_csrf_token, verify_csrf_token
 from app.services.admin_auth import (
     create_admin_session,
@@ -156,7 +157,7 @@ def admin_home(
 ):
     now = datetime.now(UTC).replace(tzinfo=None)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    tomorrow_start = today_start.replace(day=today_start.day) + timedelta(days=1)
+    tomorrow_start = today_start + timedelta(days=1)
     total_members = db.scalar(select(func.count(Member.id))) or 0
     total_balance = db.scalar(select(func.coalesce(func.sum(Member.balance), 0))) or 0
     total_cashier = db.scalar(

@@ -70,7 +70,7 @@ def login(
     username: str = Form(...),
     password: str = Form(...),
     csrf_token: str = Form(...),
-    db: Session = Depends(get_session),
+    db: Session = Depends(get_session),  # noqa: B008
 ):
     settings = get_settings()
     if not _valid(csrf_token, "login-csrf:"):
@@ -110,8 +110,8 @@ def login(
 def logout(
     request: Request,
     csrf_token: str = Form(...),
-    user: AdminUser = Depends(require_admin),
-    db: Session = Depends(get_session),
+    user: AdminUser = Depends(require_admin),  # noqa: B008
+    db: Session = Depends(get_session),  # noqa: B008
 ):
     if not _valid(csrf_token, "admin-csrf:"):
         return RedirectResponse("/admin", status_code=303)
@@ -127,7 +127,7 @@ def logout(
 
 
 @router.get("/admin")
-def admin_home(request: Request, user: AdminUser = Depends(require_admin)):
+def admin_home(request: Request, user: AdminUser = Depends(require_admin)):  # noqa: B008
     return templates.TemplateResponse(
         request, "admin/base_admin.html",
         {"user": user, "active": "dashboard", "csrf_token": _token("admin-csrf:"), "content": "Dashboard"},
@@ -135,7 +135,7 @@ def admin_home(request: Request, user: AdminUser = Depends(require_admin)):
 
 
 @router.get("/admin/settings/password")
-def password_page(request: Request, user: AdminUser = Depends(require_admin)):
+def password_page(request: Request, user: AdminUser = Depends(require_admin)):  # noqa: B008
     return templates.TemplateResponse(
         request, "admin/password.html",
         {"user": user, "csrf_token": _token("admin-csrf:"), "error": None, "active": "settings"},
@@ -149,8 +149,8 @@ def change_password(
     new_password: str = Form(...),
     confirm_password: str = Form(...),
     csrf_token: str = Form(...),
-    user: AdminUser = Depends(require_admin),
-    db: Session = Depends(get_session),
+    user: AdminUser = Depends(require_admin),  # noqa: B008
+    db: Session = Depends(get_session),  # noqa: B008
 ):
     if not _valid(csrf_token, "admin-csrf:"):
         return _bad_form(request, "admin/password.html", "Token CSRF tidak valid", 403, user)
@@ -174,8 +174,8 @@ def change_password(
 @router.get("/admin/settings/sessions")
 def sessions_page(
     request: Request,
-    user: AdminUser = Depends(require_admin),
-    db: Session = Depends(get_session),
+    user: AdminUser = Depends(require_admin),  # noqa: B008
+    db: Session = Depends(get_session),  # noqa: B008
 ):
     current = request.state.admin_session
     sessions = db.scalars(
@@ -195,8 +195,8 @@ def end_session(
     session_id: int,
     request: Request,
     csrf_token: str = Form(...),
-    user: AdminUser = Depends(require_admin),
-    db: Session = Depends(get_session),
+    user: AdminUser = Depends(require_admin),  # noqa: B008
+    db: Session = Depends(get_session),  # noqa: B008
 ):
     if not _valid(csrf_token, "admin-csrf:"):
         return RedirectResponse("/admin/settings/sessions", status_code=303)
@@ -215,8 +215,8 @@ def end_session(
 def end_other_sessions(
     request: Request,
     csrf_token: str = Form(...),
-    user: AdminUser = Depends(require_admin),
-    db: Session = Depends(get_session),
+    user: AdminUser = Depends(require_admin),  # noqa: B008
+    db: Session = Depends(get_session),  # noqa: B008
 ):
     if not _valid(csrf_token, "admin-csrf:"):
         return RedirectResponse("/admin/settings/sessions", status_code=303)

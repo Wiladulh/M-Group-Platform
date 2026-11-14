@@ -1,0 +1,56 @@
+{% extends "admin/base_admin.html" %}
+{% block content %}
+<div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+  <div><h1 class="text-2xl font-semibold">Dashboard</h1><p class="mt-1 text-sm text-slate-500">Ringkasan operasional M-Group Platform</p></div>
+  <span class="text-sm text-slate-500">Administrator: {{ user.display_name }}</span>
+</div>
+
+<section aria-label="Ringkasan" class="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+  {% for label, value, detail in [
+    ("Total Members", total_members, "Member terdaftar"),
+    ("Total Balance", "Rp " ~ "{:,.0f}".format(total_balance), "Saldo seluruh member"),
+    ("Total Cashier", total_cashier, "Perangkat cashier"),
+    ("Total Vending", total_vending, "Perangkat vending"),
+    ("Transaksi Hari Ini", transactions_today, "Semua transaksi hari ini"),
+    ("Topup Hari Ini", "Rp " ~ "{:,.0f}".format(topups_today), "Total nominal topup selesai")
+  ] %}
+  <article class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <p class="text-sm font-medium text-slate-500">{{ label }}</p>
+    <p class="mt-2 text-2xl font-semibold tabular-nums" data-card="{{ label|lower|replace(' ', '-') }}">{{ value }}</p>
+    <p class="mt-1 text-xs text-slate-400">{{ detail }}</p>
+  </article>
+  {% endfor %}
+</section>
+
+<section class="mb-8">
+  <div class="mb-3 flex items-center justify-between"><h2 class="text-lg font-semibold">Recent Activity</h2><span class="text-xs text-slate-500">15 aktivitas terbaru</span></div>
+  <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+    <table class="w-full text-left text-sm">
+      <thead class="bg-slate-50 text-xs uppercase text-slate-500"><tr><th class="p-3">Waktu</th><th class="p-3">Aksi</th><th class="p-3">Entitas</th><th class="p-3">Actor</th></tr></thead>
+      <tbody>
+      {% for item in activity %}
+        <tr class="border-t border-slate-100"><td class="whitespace-nowrap p-3 text-slate-500">{{ item.created_at }}</td><td class="p-3 font-medium">{{ item.action }}</td><td class="p-3">{{ item.entity }}{% if item.entity_id %} #{{ item.entity_id }}{% endif %}</td><td class="p-3">{{ item.actor_type }}{% if item.actor_id %} · {{ item.actor_id }}{% endif %}</td></tr>
+      {% else %}
+        <tr><td colspan="4" class="p-5 text-center text-slate-500">Belum ada aktivitas</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="mb-3 flex items-center justify-between"><h2 class="text-lg font-semibold">Device Status</h2><span class="text-xs text-slate-500">{{ devices|length }} perangkat</span></div>
+  <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+    <table class="w-full text-left text-sm">
+      <thead class="bg-slate-50 text-xs uppercase text-slate-500"><tr><th class="p-3">Device</th><th class="p-3">Tipe</th><th class="p-3">Status</th><th class="p-3">Last Seen</th></tr></thead>
+      <tbody>
+      {% for device in devices %}
+        <tr class="border-t border-slate-100"><td class="p-3 font-medium">{{ device.name }}</td><td class="p-3">{{ device.type }}</td><td class="p-3">{% if device.status != "ACTIVE" %}Revoked{% elif device.ws_connected %}Online{% else %}Offline{% endif %}</td><td class="p-3 text-slate-500">{{ device.last_seen_at or "—" }}</td></tr>
+      {% else %}
+        <tr><td colspan="4" class="p-5 text-center text-slate-500">Belum ada perangkat terdaftar</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

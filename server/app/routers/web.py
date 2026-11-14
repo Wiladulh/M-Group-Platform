@@ -160,26 +160,32 @@ def admin_home(
     tomorrow_start = today_start + timedelta(days=1)
     total_members = db.scalar(select(func.count(Member.id))) or 0
     total_balance = db.scalar(select(func.coalesce(func.sum(Member.balance), 0))) or 0
-    total_cashier = db.scalar(
-        select(func.count(Device.id)).where(Device.type == "cashier")
-    ) or 0
-    total_vending = db.scalar(
-        select(func.count(Device.id)).where(Device.type == "vending")
-    ) or 0
-    transactions_today = db.scalar(
-        select(func.count(Transaction.id)).where(
-            Transaction.occurred_at >= today_start,
-            Transaction.occurred_at < tomorrow_start,
+    total_cashier = (
+        db.scalar(select(func.count(Device.id)).where(Device.type == "cashier")) or 0
+    )
+    total_vending = (
+        db.scalar(select(func.count(Device.id)).where(Device.type == "vending")) or 0
+    )
+    transactions_today = (
+        db.scalar(
+            select(func.count(Transaction.id)).where(
+                Transaction.occurred_at >= today_start,
+                Transaction.occurred_at < tomorrow_start,
+            )
         )
-    ) or 0
-    topups_today = db.scalar(
-        select(func.coalesce(func.sum(Transaction.amount), 0)).where(
-            Transaction.type == "TOPUP",
-            Transaction.status == "COMPLETED",
-            Transaction.occurred_at >= today_start,
-            Transaction.occurred_at < tomorrow_start,
+        or 0
+    )
+    topups_today = (
+        db.scalar(
+            select(func.coalesce(func.sum(Transaction.amount), 0)).where(
+                Transaction.type == "TOPUP",
+                Transaction.status == "COMPLETED",
+                Transaction.occurred_at >= today_start,
+                Transaction.occurred_at < tomorrow_start,
+            )
         )
-    ) or 0
+        or 0
+    )
     activity = db.scalars(
         select(AuditLog).order_by(AuditLog.created_at.desc(), AuditLog.id.desc()).limit(15)
     ).all()

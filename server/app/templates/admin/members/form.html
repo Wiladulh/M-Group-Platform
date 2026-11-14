@@ -5,44 +5,91 @@
   <p class="mt-1 text-sm text-slate-500">Masukkan data member baru.</p>
 </div>
 
-<form method="post" action="/admin/members/new" class="max-w-2xl space-y-5 rounded-xl border border-slate-200 bg-white p-6">
+<form
+  method="post"
+  action="/admin/members/new"
+  class="max-w-2xl space-y-5 rounded-xl border border-slate-200 bg-white p-6"
+>
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
   <label class="block text-sm font-medium">
     Nama Lengkap
-    <input name="full_name" value="{{ form.get('full_name', '') }}" required minlength="3" maxlength="100" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
-    {% if errors.get('full_name') %}<span class="mt-1 block text-xs text-red-600">{{ errors.get('full_name') }}</span>{% endif %}
+    <input
+      name="full_name"
+      value="{{ form.get('full_name', '') }}"
+      required minlength="3" maxlength="100"
+      class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+    >
+    {% if errors.get('full_name') %}
+    <span class="mt-1 block text-xs text-red-600">{{ errors.get('full_name') }}</span>
+    {% endif %}
   </label>
 
   <label class="block text-sm font-medium">
     NIK
-    <input name="nik" value="{{ form.get('nik', '') }}" required minlength="1" maxlength="64" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
-    {% if errors.get('nik') %}<span class="mt-1 block text-xs text-red-600">{{ errors.get('nik') }}</span>{% endif %}
+    <input
+      name="nik"
+      value="{{ form.get('nik', '') }}"
+      required minlength="1" maxlength="64"
+      class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+    >
+    {% if errors.get('nik') %}
+    <span class="mt-1 block text-xs text-red-600">{{ errors.get('nik') }}</span>
+    {% endif %}
   </label>
 
   <label class="block text-sm font-medium">
     Nomor HP
-    <input name="phone" value="{{ form.get('phone', '') }}" required placeholder="08xxxxxxxxxx" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
-    {% if errors.get('phone') %}<span class="mt-1 block text-xs text-red-600">{{ errors.get('phone') }}</span>{% endif %}
+    <input
+      name="phone"
+      value="{{ form.get('phone', '') }}"
+      required placeholder="08xxxxxxxxxx"
+      class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+    >
+    {% if errors.get('phone') %}
+    <span class="mt-1 block text-xs text-red-600">{{ errors.get('phone') }}</span>
+    {% endif %}
   </label>
 
   <label class="block text-sm font-medium">
     Saldo Awal (Rp)
-    <input type="number" name="initial_balance" value="{{ form.get('initial_balance', '0') }}" min="0" step="1000" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
-    {% if errors.get('initial_balance') %}<span class="mt-1 block text-xs text-red-600">{{ errors.get('initial_balance') }}</span>{% endif %}
+    <input
+      type="number" name="initial_balance"
+      value="{{ form.get('initial_balance', '0') }}"
+      min="0" step="1000"
+      class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+    >
+    {% if errors.get('initial_balance') %}
+    <span class="mt-1 block text-xs text-red-600">
+      {{ errors.get('initial_balance') }}
+    </span>
+    {% endif %}
   </label>
 
   <label class="block text-sm font-medium">
     Catatan
-    <textarea name="notes" rows="3" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">{{ form.get('notes', '') }}</textarea>
-    {% if errors.get('notes') %}<span class="mt-1 block text-xs text-red-600">{{ errors.get('notes') }}</span>{% endif %}
+    <textarea
+      name="notes" rows="3"
+      class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+    >{{ form.get('notes', '') }}</textarea>
+    {% if errors.get('notes') %}
+    <span class="mt-1 block text-xs text-red-600">{{ errors.get('notes') }}</span>
+    {% endif %}
   </label>
 
-  {% if errors.get('csrf_token') %}<p class="text-sm text-red-600">{{ errors.get('csrf_token') }}</p>{% endif %}
+  {% if errors.get('csrf_token') %}
+  <p class="text-sm text-red-600">{{ errors.get('csrf_token') }}</p>
+  {% endif %}
 
   <div class="flex flex-wrap gap-2">
-    <button type="submit" class="rounded-lg bg-slate-900 px-5 py-2 text-sm font-medium text-white">Daftarkan Member</button>
-    <a href="/admin/members" class="rounded-lg border border-slate-300 px-5 py-2 text-sm font-medium">Batal</a>
+    <button
+      type="submit"
+      class="rounded-lg bg-slate-900 px-5 py-2 text-sm font-medium text-white"
+    >Daftarkan Member</button>
+    <a
+      href="/admin/members"
+      class="rounded-lg border border-slate-300 px-5 py-2 text-sm font-medium"
+    >Batal</a>
   </div>
 </form>
 {% endblock %}

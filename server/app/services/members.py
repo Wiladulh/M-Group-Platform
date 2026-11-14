@@ -10,7 +10,9 @@ from app.services.audit import log_admin_action
 
 def _next_member_code(session: Session) -> str:
     """Allocate the next sequential MG-[A-Z]NNNNN member code."""
-    last_code = session.scalar(select(Member.member_code).order_by(Member.member_code.desc()).limit(1))
+    last_code = session.scalar(
+        select(Member.member_code).order_by(Member.member_code.desc()).limit(1)
+    )
     if last_code is None:
         return "MG-A00001"
     letter = last_code[3]

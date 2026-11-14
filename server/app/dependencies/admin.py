@@ -1,6 +1,5 @@
 """Browser administrator authentication dependency."""
 
-
 from fastapi import Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -9,6 +8,8 @@ from app.config import get_settings
 from app.db import get_session
 from app.models.admin import AdminUser
 from app.services.admin_auth import lookup_admin_session, touch_admin_session
+
+
 def require_admin(request: Request, db: Session = Depends(get_session)) -> AdminUser:  # noqa: B008
     """Require a valid session cookie, refresh sliding expiry, and reject bearer auth."""
     if request.headers.get("Authorization"):

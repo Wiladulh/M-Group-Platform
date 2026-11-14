@@ -18,6 +18,8 @@ from app.models import AdminSession, AdminUser, Base, LoginAttempt
 from app.models.base import utc_now
 from app.security.session_token import hash_session_token
 from app.services.admin_auth import create_admin_session
+
+
 @pytest.fixture
 def web_client() -> Iterator[tuple[TestClient, sessionmaker]]:
     engine = create_engine(
@@ -112,10 +114,7 @@ def test_login_unknown_username_is_rejected(web_client):
 def test_login_rate_limit_blocks_sixth_failure(web_client):
     client, factory = web_client
     db = factory()
-    db.add_all([
-        LoginAttempt(ip="testclient", username="admin", success=False)
-        for _ in range(5)
-    ])
+    db.add_all([LoginAttempt(ip="testclient", username="admin", success=False) for _ in range(5)])
     db.commit()
     db.close()
     page = client.get("/admin/login")

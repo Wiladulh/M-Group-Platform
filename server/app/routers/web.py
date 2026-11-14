@@ -1,21 +1,21 @@
 """Administrator browser routes."""
 
 import base64
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatchError
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import RedirectResponse
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from starlette.templating import Jinja2Templates
 
 from app.config import get_settings
 from app.db import get_session
 from app.dependencies.admin import require_admin
-from app.models.admin import AdminSession, AdminUser
+from app.models import AuditLog, Device, Member, TopUpRequest, Transaction\nfrom app.models.admin import AdminSession, AdminUser
 from app.security.csrf import generate_csrf_token, verify_csrf_token
 from app.services.admin_auth import (
     create_admin_session,
@@ -141,15 +141,54 @@ def logout(
 
 
 @router.get("/admin")
-def admin_home(request: Request, user: AdminUser = Depends(require_admin)):  # noqa: B008
+def admin_home(
+    request: Request,
+    user: AdminUser = Depends(require_admin),  # noqa: B008
+    db: Session = Depends(get_session),  # noqa: B008
+):
+    now = datetime.now(UTC).replace(tzinfo=None)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    tomorrow_start = today_start.replace(day=today_start.day) + timedelta(days=1)
+    total_members = db.scalar(select(func.count(Member.id))) or 0
+    total_balance = db.scalar(select(func.coalesce(func.sum(Member.balance), 0))) or 0
+    total_cashier = db.scalar(
+        select(func.count(Device.id)).where(Device.type == "cashier")
+    ) or 0
+    total_vending = db.scalar(
+        select(func.count(Device.id)).where(Device.type == "vending")
+    ) or 0
+    transactions_today = db.scalar(
+        select(func.count(Transaction.id)).where(
+            Transaction.occurred_at >= today_start,
+            Transaction.occurred_at < tomorrow_start,
+        )
+    ) or 0
+    topups_today = db.scalar(
+        select(func.coalesce(func.sum(TopUpRequest.amount), 0)).where(
+            TopUpRequest.created_at >= today_start,
+            TopUpRequest.created_at < tomorrow_start,
+            TopUpRequest.status == "COMPLETED",
+        )
+    ) or 0
+    activity = db.scalars(
+        select(AuditLog).order_by(AuditLog.created_at.desc(), AuditLog.id.desc()).limit(15)
+    ).all()
+    devices = db.scalars(select(Device).order_by(Device.type, Device.name)).all()
     return templates.TemplateResponse(
         request,
-        "admin/base_admin.html",
+        "admin/dashboard.html",
         {
             "user": user,
             "active": "dashboard",
             "csrf_token": _token("admin-csrf:"),
-            "content": "Dashboard",
+            "total_members": total_members,
+            "total_balance": total_balance,
+            "total_cashier": total_cashier,
+            "total_vending": total_vending,
+            "transactions_today": transactions_today,
+            "topups_today": topups_today,
+            "activity": activity,
+            "devices": devices,
         },
     )
 

@@ -160,12 +160,8 @@ def admin_home(
     tomorrow_start = today_start + timedelta(days=1)
     total_members = db.scalar(select(func.count(Member.id))) or 0
     total_balance = db.scalar(select(func.coalesce(func.sum(Member.balance), 0))) or 0
-    total_cashier = (
-        db.scalar(select(func.count(Device.id)).where(Device.type == "cashier")) or 0
-    )
-    total_vending = (
-        db.scalar(select(func.count(Device.id)).where(Device.type == "vending")) or 0
-    )
+    total_cashier = db.scalar(select(func.count(Device.id)).where(Device.type == "cashier")) or 0
+    total_vending = db.scalar(select(func.count(Device.id)).where(Device.type == "vending")) or 0
     transactions_today = (
         db.scalar(
             select(func.count(Transaction.id)).where(

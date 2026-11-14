@@ -13,7 +13,7 @@ from sqlalchemy.pool import StaticPool
 from app.config import get_settings
 from app.db import get_session
 from app.main import app
-from app.models import AuditLog, Base, Device, Member, Transaction
+from app.models import AdminUser, AuditLog, Base, Device, Member, Transaction
 from app.services.admin_auth import create_admin_session
 
 
@@ -45,7 +45,7 @@ def dashboard_client() -> Iterator[tuple[TestClient, sessionmaker]]:
 def dashboard_admin(dashboard_client):
     _, factory = dashboard_client
     db = factory()
-    user = __import__("app.models", fromlist=["AdminUser"]).AdminUser(
+    user = AdminUser(
         id=1,
         username="dashboard-admin",
         display_name="Dashboard Admin",
@@ -87,7 +87,7 @@ def test_dashboard_cards_show_database_values(dashboard_client, dashboard_admin)
     client, factory = dashboard_client
     db = factory()
     member = Member(
-        member_code="MG-A0001",
+        member_code="MG-A00001",
         full_name="Test Member",
         nik_enc="encrypted-test-value",
         nik_idx="test-nik-index",

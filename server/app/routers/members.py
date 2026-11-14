@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, Depends, Form, Query, Request
 from fastapi.responses import RedirectResponse
+from pydantic import ValidationError
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
@@ -26,6 +27,7 @@ def _form_context(user, csrf_token: str, errors: dict, form: dict) -> dict:
     }
 
 
+@router.get("")
 @router.get("/")
 def members_list(
     request: Request,
@@ -121,12 +123,11 @@ def create_member_form(
 
     try:
         data = MemberCreateForm.model_validate(form)
-    except Exception as exc:
+    except ValidationError as exc:
         errors = {}
-        if hasattr(exc, "errors"):
-            for error in exc.errors():
-                field = str(error["loc"][0])
-                errors[field] = error["msg"]
+        for error in exc.errors():
+            field = str(error["loc"][0])
+            errors[field] = error["msg"]
         context = _form_context(user, _token("admin-csrf:"), errors, form)
         return templates.TemplateResponse(
             request, "admin/members/form.html", context, status_code=422

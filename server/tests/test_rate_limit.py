@@ -5,14 +5,11 @@ from datetime import timedelta
 from pathlib import Path
 
 import pytest
-
 from app.models.base import Base, utc_now
 from app.models.login_attempt import LoginAttempt
 from app.services.rate_limit import check_login_rate_limit, record_login_attempt
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
-
-
 @pytest.fixture
 def db_session(tmp_path: Path) -> Iterator[Session]:
     engine = create_engine(f"sqlite:///{tmp_path / 'rate-limit-test.db'}")

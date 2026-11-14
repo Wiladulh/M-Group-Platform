@@ -204,10 +204,12 @@ def test_session_token_generate_hash_verify() -> None:
 
 
 def test_csrf_token_generate_and_verify() -> None:
-    token = generate_csrf_token()
+    key = b"test-key-32-bytes-padded-here-xx"
+    context = "login-csrf"
+    token = generate_csrf_token(key=key, context=context)
     assert token
-    assert verify_csrf_token(token, token)
-    assert not verify_csrf_token(token, token + "x")
+    assert verify_csrf_token(token=token, key=key, context=context)
+    assert not verify_csrf_token(token=token + "x", key=key, context=context)
 
 
 def test_encryption_rejects_all_zero_data_key(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -15,7 +15,7 @@ from starlette.templating import Jinja2Templates
 from app.config import get_settings
 from app.db import get_session
 from app.dependencies.admin import require_admin
-from app.models import AuditLog, Device, Member, TopUpRequest, Transaction\nfrom app.models.admin import AdminSession, AdminUser
+from app.models import AuditLog, Device, Member, Transaction\nfrom app.models.admin import AdminSession, AdminUser
 from app.security.csrf import generate_csrf_token, verify_csrf_token
 from app.services.admin_auth import (
     create_admin_session,
@@ -59,6 +59,14 @@ def _bad_form(request: Request, template: str, error: str, status: int, user=Non
         },
         status_code=status,
     )
+
+
+@router.get("/")
+def home(request: Request):
+    """Redirect the browser to the authenticated admin area or login."""
+    settings = get_settings()
+    destination = "/admin" if request.cookies.get(settings.session_cookie_name) else "/admin/login"
+    return RedirectResponse(destination, status_code=303)
 
 
 @router.get("/admin/login")
@@ -164,10 +172,11 @@ def admin_home(
         )
     ) or 0
     topups_today = db.scalar(
-        select(func.coalesce(func.sum(TopUpRequest.amount), 0)).where(
-            TopUpRequest.created_at >= today_start,
-            TopUpRequest.created_at < tomorrow_start,
-            TopUpRequest.status == "COMPLETED",
+        select(func.coalesce(func.sum(Transaction.amount), 0)).where(
+            Transaction.type == "TOPUP",
+            Transaction.status == "COMPLETED",
+            Transaction.occurred_at >= today_start,
+            Transaction.occurred_at < tomorrow_start,
         )
     ) or 0
     activity = db.scalars(

@@ -6,13 +6,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
-
 from app.models.base import Base
 from app.services.audit import log_admin_action
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
-
-
 @pytest.fixture
 def db_session(tmp_path: Path) -> Iterator[Session]:
     engine = create_engine(f"sqlite:///{tmp_path / 'audit-test.db'}")

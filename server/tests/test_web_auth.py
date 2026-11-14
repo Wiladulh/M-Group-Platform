@@ -19,6 +19,7 @@ from app.models.base import utc_now
 from app.security.session_token import hash_session_token
 from app.services.admin_auth import create_admin_session
 
+
 @pytest.fixture
 def web_client() -> Iterator[tuple[TestClient, sessionmaker]]:
     engine = create_engine(

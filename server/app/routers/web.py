@@ -50,8 +50,13 @@ def _ip(request: Request) -> str:
 
 def _bad_form(request: Request, template: str, error: str, status: int, user=None):
     return templates.TemplateResponse(
-        request, template,
-        {"user": user, "csrf_token": _token("login-csrf:" if user is None else "admin-csrf:"), "error": error},
+        request,
+        template,
+        {
+            "user": user,
+            "csrf_token": _token("login-csrf:" if user is None else "admin-csrf:"),
+            "error": error,
+        },
         status_code=status,
     )
 
@@ -59,7 +64,8 @@ def _bad_form(request: Request, template: str, error: str, status: int, user=Non
 @router.get("/admin/login")
 def login_page(request: Request):
     return templates.TemplateResponse(
-        request, "admin/login.html",
+        request,
+        "admin/login.html",
         {"csrf_token": _token("login-csrf:"), "error": None},
     )
 
@@ -77,7 +83,10 @@ def login(
         return _bad_form(request, "admin/login.html", "Token CSRF tidak valid", 403)
     ip = _ip(request)
     if not check_login_rate_limit(
-        db, ip, username, settings.login_rate_limit_attempts,
+        db,
+        ip,
+        username,
+        settings.login_rate_limit_attempts,
         settings.login_rate_limit_window_minutes,
     ):
         return _bad_form(request, "admin/login.html", "Terlalu banyak percobaan login", 429)
@@ -100,8 +109,13 @@ def login(
     db.commit()
     response = RedirectResponse("/admin", status_code=303)
     response.set_cookie(
-        settings.session_cookie_name, token, httponly=True, secure=settings.secure_cookies,
-        samesite="lax", path="/", max_age=settings.session_idle_minutes * 60,
+        settings.session_cookie_name,
+        token,
+        httponly=True,
+        secure=settings.secure_cookies,
+        samesite="lax",
+        path="/",
+        max_age=settings.session_idle_minutes * 60,
     )
     return response
 
@@ -129,16 +143,28 @@ def logout(
 @router.get("/admin")
 def admin_home(request: Request, user: AdminUser = Depends(require_admin)):  # noqa: B008
     return templates.TemplateResponse(
-        request, "admin/base_admin.html",
-        {"user": user, "active": "dashboard", "csrf_token": _token("admin-csrf:"), "content": "Dashboard"},
+        request,
+        "admin/base_admin.html",
+        {
+            "user": user,
+            "active": "dashboard",
+            "csrf_token": _token("admin-csrf:"),
+            "content": "Dashboard",
+        },
     )
 
 
 @router.get("/admin/settings/password")
 def password_page(request: Request, user: AdminUser = Depends(require_admin)):  # noqa: B008
     return templates.TemplateResponse(
-        request, "admin/password.html",
-        {"user": user, "csrf_token": _token("admin-csrf:"), "error": None, "active": "settings"},
+        request,
+        "admin/password.html",
+        {
+            "user": user,
+            "csrf_token": _token("admin-csrf:"),
+            "error": None,
+            "active": "settings",
+        },
     )
 
 
@@ -159,13 +185,24 @@ def change_password(
     except (InvalidHashError, VerificationError, VerifyMismatchError):
         old_ok = False
     if not old_ok or len(new_password) < 12 or new_password != confirm_password:
-        return _bad_form(request, "admin/password.html", "Password lama atau konfirmasi tidak valid", 400, user)
+        return _bad_form(
+            request,
+            "admin/password.html",
+            "Password lama atau konfirmasi tidak valid",
+            400,
+            user,
+        )
     user.password_hash = hasher.hash(new_password)
     user.must_change_password = False
     count = revoke_other_sessions(db, user, request.state.admin_session)
     log_admin_action(
-        db, str(user.id), "PASSWORD_CHANGED", "admin_user", str(user.id),
-        after={"revoked_sessions": count}, ip=_ip(request),
+        db,
+        str(user.id),
+        "PASSWORD_CHANGED",
+        "admin_user",
+        str(user.id),
+        after={"revoked_sessions": count},
+        ip=_ip(request),
     )
     db.commit()
     return RedirectResponse("/admin/settings/password", status_code=303)
@@ -179,14 +216,20 @@ def sessions_page(
 ):
     current = request.state.admin_session
     sessions = db.scalars(
-        select(AdminSession).where(
-            AdminSession.user_id == user.id, AdminSession.revoked_at.is_(None)
-        ).order_by(AdminSession.last_seen_at.desc())
+        select(AdminSession)
+        .where(AdminSession.user_id == user.id, AdminSession.revoked_at.is_(None))
+        .order_by(AdminSession.last_seen_at.desc())
     ).all()
     return templates.TemplateResponse(
-        request, "admin/sessions.html",
-        {"user": user, "sessions": sessions, "current_session_id": current.id,
-         "csrf_token": _token("admin-csrf:"), "active": "sessions"},
+        request,
+        "admin/sessions.html",
+        {
+            "user": user,
+            "sessions": sessions,
+            "current_session_id": current.id,
+            "csrf_token": _token("admin-csrf:"),
+            "active": "sessions",
+        },
     )
 
 
@@ -200,10 +243,13 @@ def end_session(
 ):
     if not _valid(csrf_token, "admin-csrf:"):
         return RedirectResponse("/admin/settings/sessions", status_code=303)
-    session = db.scalar(select(AdminSession).where(
-        AdminSession.id == session_id, AdminSession.user_id == user.id,
-        AdminSession.revoked_at.is_(None),
-    ))
+    session = db.scalar(
+        select(AdminSession).where(
+            AdminSession.id == session_id,
+            AdminSession.user_id == user.id,
+            AdminSession.revoked_at.is_(None),
+        )
+    )
     if session and session.id != request.state.admin_session.id:
         revoke_admin_session(db, session)
         log_admin_action(db, str(user.id), "SESSION_ENDED", "admin_session", str(session.id))
@@ -222,8 +268,12 @@ def end_other_sessions(
         return RedirectResponse("/admin/settings/sessions", status_code=303)
     count = revoke_other_sessions(db, user, request.state.admin_session)
     log_admin_action(
-        db, str(user.id), "OTHER_SESSIONS_ENDED", "admin_session",
-        after={"revoked_sessions": count}, ip=_ip(request),
+        db,
+        str(user.id),
+        "OTHER_SESSIONS_ENDED",
+        "admin_session",
+        after={"revoked_sessions": count},
+        ip=_ip(request),
     )
     db.commit()
     return RedirectResponse("/admin/settings/sessions", status_code=303)

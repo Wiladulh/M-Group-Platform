@@ -2,9 +2,10 @@
 
 import re
 from collections.abc import Iterator
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
+
 from app.config import get_settings
 from app.db import get_session
 from app.main import app
@@ -12,11 +13,13 @@ from app.models import AdminSession, AdminUser, Base, LoginAttempt
 from app.models.base import utc_now
 from app.security.session_token import hash_session_token
 from app.services.admin_auth import create_admin_session
+
 from argon2 import PasswordHasher
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
+
 
 @pytest.fixture
 def web_client() -> Iterator[tuple[TestClient, sessionmaker]]:
@@ -159,8 +162,9 @@ def test_session_sliding_refreshes_expiry(web_client, admin_user):
     session = db.scalar(
         select(AdminSession).where(AdminSession.session_hash == hash_session_token(token))
     )
-    session.last_seen_at = utc_now() - timedelta(hours=1)
-    session.expires_at = utc_now() + timedelta(minutes=1)
+    naive_now = datetime.now(UTC).replace(tzinfo=None)
+    session.last_seen_at = naive_now - timedelta(hours=1)
+    session.expires_at = naive_now + timedelta(minutes=1)
     db.commit()
     old_expiry = session.expires_at
     db.close()

@@ -218,3 +218,8 @@
 - Rationale: spec is the binding SSoT. Adding QRIS/Xendit now would violate it
   and expand scope beyond Section 14.
 
+
+## P14-c — NIK dapat diubah (keputusan pemilik proyek, 2026-11-25)
+- Konflik antara spec §4.4 / keputusan #35 (NIK diisi sekali, tidak dapat diubah) dan spec §14.7 (Edit boleh mengubah NIK) diselesaikan dengan: NIK boleh diubah dari halaman Edit member, untuk mengantisipasi salah input atau perubahan identitas.
+- Setiap perubahan NIK wajib ditulis ke `audit_logs` dengan pesan `NIK diubah` tanpa menyimpan nilai NIK di log.
+- Saat NIK diubah, `nik_idx` (blind index) dihitung ulang dan tetap wajib unik (`VALIDATION_ERROR` jika sudah dipakai member lain).

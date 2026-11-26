@@ -38,3 +38,55 @@ class MemberCreateForm(BaseModel):
         if isinstance(value, str):
             return value.strip() or None
         return value
+
+
+class MemberEditForm(BaseModel):
+    """Validated input for editing an existing member's profile."""
+
+    full_name: str = Field(min_length=3, max_length=100)
+    nik: str | None = Field(default=None, max_length=64)
+    phone: str = Field(pattern=r"^(\+62|62|0)8\d{8,12}$")
+    notes: str | None = None
+
+    @field_validator("phone", mode="before")
+    @classmethod
+    def normalize_phone(cls, value: str) -> str:
+        """Normalize Indonesian mobile prefixes to the local 08 format."""
+        if not isinstance(value, str):
+            return value
+        value = value.strip()
+        if value.startswith("+62"):
+            return "0" + value[3:]
+        if value.startswith("62"):
+            return "0" + value[2:]
+        return value
+
+    @field_validator("full_name", "nik", mode="before")
+    @classmethod
+    def strip_text(cls, value: str | None) -> str | None:
+        """Trim text; a blank NIK means 'unchanged'."""
+        if isinstance(value, str):
+            value = value.strip()
+            return value or None
+        return value
+
+    @field_validator("notes", mode="before")
+    @classmethod
+    def normalize_notes(cls, value: str | None) -> str | None:
+        """Convert blank notes to None."""
+        if isinstance(value, str):
+            return value.strip() or None
+        return value
+
+
+class MemberStatusForm(BaseModel):
+    """Validated input for activating or suspending a member."""
+
+    status: str = Field(pattern=r"^(ACTIVE|SUSPENDED)$")
+    reason: str = Field(min_length=3, max_length=200)
+
+    @field_validator("reason", mode="before")
+    @classmethod
+    def strip_reason(cls, value: str) -> str:
+        """Trim the mandatory reason text."""
+        return value.strip() if isinstance(value, str) else value

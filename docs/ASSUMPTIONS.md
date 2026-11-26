@@ -223,3 +223,9 @@
 - Konflik antara spec §4.4 / keputusan #35 (NIK diisi sekali, tidak dapat diubah) dan spec §14.7 (Edit boleh mengubah NIK) diselesaikan dengan: NIK boleh diubah dari halaman Edit member, untuk mengantisipasi salah input atau perubahan identitas.
 - Setiap perubahan NIK wajib ditulis ke `audit_logs` dengan pesan `NIK diubah` tanpa menyimpan nilai NIK di log.
 - Saat NIK diubah, `nik_idx` (blind index) dihitung ulang dan tetap wajib unik (`VALIDATION_ERROR` jika sudah dipakai member lain).
+
+## P14-d — Detail dan edit member
+- Status member di database tetap `ACTIVE|SUSPENDED` sesuai schema. Label UI "Aktif" dan "Nonaktif" memetakan ke nilai tersebut.
+- Alasan perubahan status disimpan di kolom `after_json` audit log, karena tabel `members` tidak punya kolom alasan.
+- Riwayat saldo di halaman detail dibatasi 50 baris terakhir sebagai langkah sederhana; paginasi penuh ditunda.
+- Suspend memakai bump versi cache (`bump_member_cache_version`) sebagai mekanisme dorong ke unit. Push WS `cache.invalidate` belum diimplementasikan di fase ini.

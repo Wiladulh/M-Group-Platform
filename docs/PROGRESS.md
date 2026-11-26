@@ -64,3 +64,15 @@ Cabang P14-b dan P14-c di remote belum pernah di-merge ke `main` dan belum terca
 
 - Tests: 267 passed. Ruff check dan format clean setelah perbaikan urutan import.
 - Lanjut berikutnya: detail member, edit member (termasuk NIK, lihat ASSUMPTIONS), dan Manage Card.
+
+## P14-d — Detail dan edit member (branch `p14-d-member-detail-edit`)
+
+- Status: selesai untuk detail, edit profil, perubahan status, dan lihat NIK. Manage Card (pasang atau ganti kartu) belum dikerjakan; bergantung pada alur binding Cashier.
+- Route baru: `GET /admin/members/{id}`, `GET,POST /admin/members/{id}/edit`, `POST /admin/members/{id}/status`, `POST /admin/members/{id}/reveal-nik`. ID tidak ada menghasilkan 404.
+- Halaman detail memuat grup A (identitas, NIK tersembunyi), B (kartu aktif dan riwayat kartu, read-only), C (saldo, total top-up, total pemakaian), dan D (50 transaksi terakhir).
+- Edit: NIK kosong berarti tidak berubah. NIK baru dihitung ulang blind index-nya dan harus unik. Audit mencatat `MEMBER_UPDATED` dengan `NIK diubah`, tanpa nilai NIK.
+- Status: nonaktifkan atau aktifkan wajib disertai alasan. Setiap perubahan dicatat di audit (`MEMBER_STATUS_CHANGED`) dan menaikkan versi cache member agar unit menerima delta.
+- Lihat NIK: hanya lewat POST dengan CSRF, dicatat di audit (`MEMBER_NIK_REVEALED`).
+- Perbaikan: form registrasi dan edit sebelumnya mengembalikan 400 generik saat field wajib kosong (handler global untuk `RequestValidationError`). Sekarang field diterima sebagai opsional dan divalidasi oleh Pydantic, sehingga pesan error tampil di form (422).
+- Test: 11 test baru di `tests/test_web_member_detail.py`. Total 278 passed, coverage ~89,9%, ruff check dan format clean.
+- Belum: paginasi riwayat saldo (saat ini 50 terakhir), push WebSocket `cache.invalidate` saat suspend (saat ini hanya versi cache yang dinaikkan; unit mengambil delta lewat sync), Manage Card, dan Activity tabs per perangkat.

@@ -1,0 +1,141 @@
+{% extends "admin/base_admin.html" %}
+{% block content %}
+{% set m = member %}
+{% set s = summary %}
+<div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+  <div>
+    <h1 class="text-2xl font-semibold">{{ m.full_name }}</h1>
+    <p class="mt-1 font-mono text-sm text-slate-500">{{ m.member_code }}</p>
+  </div>
+  <a href="/admin/members/{{ m.id }}/edit"
+     class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium">Edit</a>
+</div>
+
+{% if flash %}
+<div class="mb-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm">{{ flash }}</div>
+{% endif %}
+
+<section class="mb-6 rounded-xl border border-slate-200 bg-white p-6">
+  <h2 class="mb-4 text-lg font-semibold">A. Identitas</h2>
+  <dl class="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+    <div><dt class="text-slate-500">Member UID</dt><dd class="font-mono">{{ m.member_code }}</dd></div>
+    <div><dt class="text-slate-500">Nama</dt><dd>{{ m.full_name }}</dd></div>
+    <div>
+      <dt class="text-slate-500">NIK</dt>
+      <dd class="flex flex-wrap items-center gap-2">
+        {% if revealed_nik %}
+          <span class="font-mono">{{ revealed_nik }}</span>
+        {% else %}
+          <span class="font-mono">Tersembunyi</span>
+          <form method="post" action="/admin/members/{{ m.id }}/reveal-nik">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button class="rounded border border-slate-300 px-2 py-1 text-xs">Tampilkan</button>
+          </form>
+        {% endif %}
+      </dd>
+    </div>
+    <div><dt class="text-slate-500">Nomor HP</dt><dd>{{ m.phone or "-" }}</dd></div>
+    <div>
+      <dt class="text-slate-500">Status</dt>
+      <dd>
+        {% if m.status == "ACTIVE" %}
+          <span class="text-green-700">Aktif</span>
+        {% else %}
+          <span class="text-slate-600">Nonaktif</span>
+        {% endif %}
+      </dd>
+    </div>
+    <div><dt class="text-slate-500">Terdaftar</dt><dd>{{ m.created_at.strftime("%d %b %Y %H:%M") if m.created_at else "-" }}</dd></div>
+    <div class="sm:col-span-2"><dt class="text-slate-500">Catatan</dt><dd>{{ m.notes or "-" }}</dd></div>
+  </dl>
+
+  <form method="post" action="/admin/members/{{ m.id }}/status" class="mt-6 flex flex-wrap items-end gap-2 border-t border-slate-200 pt-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    {% if m.status == "ACTIVE" %}
+      <input type="hidden" name="status" value="SUSPENDED">
+      <label class="text-sm">Alasan nonaktifkan (wajib)
+        <input name="reason" required minlength="3" maxlength="200"
+               class="mt-1 block rounded-lg border border-slate-300 px-3 py-2">
+      </label>
+      <button class="rounded-lg bg-red-700 px-4 py-2 text-sm font-medium text-white">Nonaktifkan</button>
+    {% else %}
+      <input type="hidden" name="status" value="ACTIVE">
+      <label class="text-sm">Alasan aktifkan (wajib)
+        <input name="reason" required minlength="3" maxlength="200"
+               class="mt-1 block rounded-lg border border-slate-300 px-3 py-2">
+      </label>
+      <button class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white">Aktifkan</button>
+    {% endif %}
+  </form>
+</section>
+
+<section class="mb-6 rounded-xl border border-slate-200 bg-white p-6">
+  <h2 class="mb-4 text-lg font-semibold">B. Identitas Transaksi (Kartu)</h2>
+  {% if s.active_card %}
+    <p class="text-sm">Kartu aktif: <span class="font-mono">••••{{ s.active_card.uid[-4:] }}</span>
+      — status <strong>{{ s.active_card.status }}</strong>
+      {% if s.active_card.bound_at %}sejak {{ s.active_card.bound_at.strftime("%d %b %Y %H:%M") }}{% endif %}
+    </p>
+  {% else %}
+    <p class="text-sm text-slate-600">Belum ada kartu. Member tidak dapat bertransaksi sebelum kartu dipasang.</p>
+  {% endif %}
+
+  {% if s.cards %}
+  <h3 class="mt-4 text-sm font-semibold">Riwayat Kartu</h3>
+  <div class="mt-2 overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="bg-slate-50 text-left">
+        <tr><th class="p-2">Kartu</th><th class="p-2">Status</th><th class="p-2">Terikat</th><th class="p-2">Alasan nonaktif</th></tr>
+      </thead>
+      <tbody>
+        {% for card in s.cards %}
+        <tr class="border-t border-slate-200">
+          <td class="p-2 font-mono">••••{{ card.uid[-4:] }}</td>
+          <td class="p-2">{{ card.status }}</td>
+          <td class="p-2">{{ card.bound_at.strftime("%d %b %Y %H:%M") if card.bound_at else "-" }}</td>
+          <td class="p-2">{{ card.deactivated_reason or "-" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+  <p class="mt-4 text-xs text-slate-500">Pasang atau ganti kartu (Manage Card) belum tersedia pada tahap ini.</p>
+</section>
+
+<section class="mb-6 rounded-xl border border-slate-200 bg-white p-6">
+  <h2 class="mb-4 text-lg font-semibold">C. Keuangan</h2>
+  <dl class="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+    <div><dt class="text-slate-500">Saldo saat ini</dt><dd class="text-lg font-semibold">Rp {{ "{:,}".format(m.balance).replace(",", ".") }}</dd></div>
+    <div><dt class="text-slate-500">Total top-up</dt><dd>Rp {{ "{:,}".format(s.total_topup).replace(",", ".") }}</dd></div>
+    <div><dt class="text-slate-500">Total pemakaian</dt><dd>Rp {{ "{:,}".format(s.total_spending).replace(",", ".") }}</dd></div>
+  </dl>
+</section>
+
+<section class="mb-6 rounded-xl border border-slate-200 bg-white p-6">
+  <h2 class="mb-4 text-lg font-semibold">D. Aktivitas Terakhir</h2>
+  {% if s.history %}
+  <div class="overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="bg-slate-50 text-left">
+        <tr><th class="p-2">Waktu (UTC)</th><th class="p-2">Jenis</th><th class="p-2">Perangkat</th><th class="p-2">Jumlah</th><th class="p-2">Saldo sesudah</th><th class="p-2">Status</th></tr>
+      </thead>
+      <tbody>
+        {% for txn, device_name, device_code in s.history %}
+        <tr class="border-t border-slate-200">
+          <td class="p-2">{{ txn.occurred_at.strftime("%d %b %Y %H:%M") }}</td>
+          <td class="p-2">{{ txn.type }}</td>
+          <td class="p-2">{{ device_name or "WebUI" }}{% if device_code %} ({{ device_code }}){% endif %}</td>
+          <td class="p-2">{{ "−" if txn.direction == "DEBIT" else "+" }}Rp {{ "{:,}".format(txn.amount).replace(",", ".") }}</td>
+          <td class="p-2">Rp {{ "{:,}".format(txn.balance_after).replace(",", ".") }}</td>
+          <td class="p-2">{{ txn.status }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <p class="text-sm text-slate-600">Belum ada transaksi.</p>
+  {% endif %}
+</section>
+{% endblock %}

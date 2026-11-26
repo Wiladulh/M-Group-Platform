@@ -1,6 +1,7 @@
 """Maintenance and development seed command-line utilities."""
 
 import argparse
+import getpass
 import os
 import sys
 from collections.abc import Callable
@@ -10,9 +11,11 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.db import SessionLocal
-from app.models import AdminUser, Device, Member, Transaction
+from app.models import AdminSession, AdminUser, Device, Member, Transaction
+from app.models.base import utc_now
 from app.security.device_token import generate_device_token, hash_device_token
 from app.security.passwords import hash_password, validate_admin_password
+from app.services.audit import log_admin_action
 
 BALANCE_STATUSES = (
     "COMPLETED",
@@ -138,6 +141,66 @@ def seed_minimal(
     return 0
 
 
+def reset_admin_password(
+    session_factory: Callable[[], Session] | sessionmaker | None = None,
+    read_password: Callable[[str], str] | None = None,
+    output: TextIO | None = None,
+) -> int:
+    """Reset the single Admin password, revoke every session, and audit the reset.
+
+    The new password is entered twice on the server console. Policy is the
+    Section 4.1 rule set (min 10 chars, letters and digits, not the username,
+    not the previous password). Returns 0 on success, 1 on any refusal.
+    """
+    out = sys.stdout if output is None else output
+    ask = getpass.getpass if read_password is None else read_password
+    factory = SessionLocal if session_factory is None else session_factory
+    db = factory()
+    try:
+        admin = db.scalar(select(AdminUser).where(AdminUser.id == 1))
+        if admin is None:
+            print("Admin belum dibuat. Jalankan seed-minimal terlebih dahulu.", file=out)
+            return 1
+        first = ask("Password admin baru: ")
+        second = ask("Ulangi password admin baru: ")
+        if first != second:
+            print("Konfirmasi password tidak sama. Password tidak diubah.", file=out)
+            return 1
+        try:
+            validate_admin_password(first, admin.username, admin.password_hash)
+        except ValueError as exc:
+            print(f"Password ditolak: {exc}. Password tidak diubah.", file=out)
+            return 1
+
+        admin.password_hash = hash_password(first)
+        admin.must_change_password = False
+        now = utc_now()
+        sessions = db.scalars(
+            select(AdminSession).where(
+                AdminSession.user_id == admin.id,
+                AdminSession.revoked_at.is_(None),
+            )
+        ).all()
+        for item in sessions:
+            item.revoked_at = now
+        log_admin_action(
+            db,
+            "cli",
+            "ADMIN_PASSWORD_RESET",
+            "admin_user",
+            str(admin.id),
+            after={"revoked_sessions": len(sessions)},
+        )
+        db.commit()
+        print(
+            f"Password admin berhasil diubah. {len(sessions)} sesi aktif dicabut.",
+            file=out,
+        )
+        return 0
+    finally:
+        db.close()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(prog="python -m app.cli")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -145,7 +208,7 @@ def main() -> int:
     subparsers.add_parser("seed-minimal", help="Seed one admin and three development devices")
     subparsers.add_parser(
         "reset-admin-password",
-        help="Reset the single Admin password (implemented in P14)",
+        help="Reset the single Admin password and revoke all admin sessions",
     )
     args = parser.parse_args()
     if args.command == "verify-ledger":
@@ -153,8 +216,7 @@ def main() -> int:
     if args.command == "seed-minimal":
         return seed_minimal()
     if args.command == "reset-admin-password":
-        print("Not yet implemented (P14)")
-        return 1
+        return reset_admin_password()
     return 1
 
 

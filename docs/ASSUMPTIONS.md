@@ -229,3 +229,8 @@
 - Alasan perubahan status disimpan di kolom `after_json` audit log, karena tabel `members` tidak punya kolom alasan.
 - Riwayat saldo di halaman detail dibatasi 50 baris terakhir sebagai langkah sederhana; paginasi penuh ditunda.
 - Suspend memakai bump versi cache (`bump_member_cache_version`) sebagai mekanisme dorong ke unit. Push WS `cache.invalidate` belum diimplementasikan di fase ini.
+
+## Reset admin password (CLI)
+- Perintah `python -m app.cli reset-admin-password` meminta password baru dua kali di konsol. Aturan password memakai `validate_admin_password` (Section 4.1).
+- Setelah berhasil: hash Argon2id disimpan, `must_change_password=false` (admin baru saja menetapkan password sendiri), semua sesi admin yang belum dicabut diberi `revoked_at`, dan audit `ADMIN_PASSWORD_RESET` dicatat dengan actor `cli` dan jumlah sesi yang dicabut. Password tidak pernah masuk audit.
+- Pada kegagalan (konfirmasi tidak sama, password ditolak, atau admin belum ada) perintah keluar dengan kode 1 dan password tidak diubah.

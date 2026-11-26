@@ -5,6 +5,7 @@ from app.models.audit import AuditLog
 from app.models.base import Base, TimestampMixin, utc_now
 from app.models.bind import CardBindSession
 from app.models.device import Device, DeviceEvent
+from app.models.login_attempt import LoginAttempt
 from app.models.member import Card, Member
 from app.models.operator import Operator, OperatorDevice
 from app.models.product import CatalogMeta, Product, VendingSlot
@@ -27,6 +28,7 @@ __all__ = [
     "CatalogMeta",
     "Device",
     "DeviceEvent",
+    "LoginAttempt",
     "Member",
     "OfflineAllowance",
     "Operator",

@@ -1,0 +1,7 @@
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Admin Login</title><script src="https://cdn.tailwindcss.com"></script><script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script></head>
+<body class="flex min-h-screen items-center justify-center bg-slate-100 p-4"><main class="w-full max-w-sm rounded-xl bg-white p-7 shadow"><h1 class="mb-6 text-2xl font-semibold">Admin Login</h1>
+{% if error %}<p role="alert" class="mb-4 rounded bg-red-100 p-3">{{ error }}</p>{% endif %}
+<form method="post" action="/admin/login" class="space-y-4" x-data="{show:false}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+<label class="block">Username<input name="username" autocomplete="username" required class="mt-1 w-full rounded border p-3"></label>
+<label class="block">Password<span class="mt-1 flex rounded border"><input name="password" :type="show?'text':'password'" autocomplete="current-password" required class="min-w-0 flex-1 p-3"><button type="button" @click="show=!show" class="px-3">Show/hide</button></span></label>
+<button class="w-full rounded bg-slate-900 p-3 text-white">Login</button></form></main></body></html>

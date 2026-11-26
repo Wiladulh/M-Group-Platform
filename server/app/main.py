@@ -7,16 +7,17 @@ from fastapi import FastAPI, HTTPException, Request, WebSocket
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 
 from app.config import get_settings
 from app.db import engine
 from app.errors import DomainError
 from app.logging import configure_logging
 from app.routers.device import router as device_router
+from app.routers.members import router as members_router
 from app.routers.payments import router as payments_router
 from app.routers.sync import router as sync_router
 from app.routers.topups import router as topups_router
+from app.routers.web import router as web_router
 from app.services.admin_session_monitor import admin_session_monitor_loop
 from app.services.background_tasks import pending_dispense_monitor_loop
 from app.services.bind_expiry import bind_expiry_loop
@@ -73,7 +74,6 @@ app = FastAPI(
 
 BASE_DIR = Path(__file__).resolve().parent
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
-templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 
 @app.exception_handler(DomainError)
@@ -137,12 +137,6 @@ async def ws_device(websocket: WebSocket):
     await ws_device_endpoint(websocket)
 
 
-@app.get("/")
-async def home(request: Request):
-    """Render the application home page."""
-    return templates.TemplateResponse(request, "base.html", {})
-
-
 def _broadcast_domain_event(event):
     if isinstance(event, CacheUpdateEvent):
         for uid in event.uid_list:
@@ -181,6 +175,8 @@ _bus.subscribe(CardStatusChangedEvent, _broadcast_domain_event)
 _bus.subscribe(CatalogChangedEvent, _broadcast_domain_event)
 
 app.include_router(device_router)
+app.include_router(members_router)
 app.include_router(payments_router)
 app.include_router(sync_router)
 app.include_router(topups_router)
+app.include_router(web_router)

@@ -49,3 +49,18 @@
   - pytest-asyncio loop scope belum ditetapkan.
   - Starlette httpx deprecation warning di testclient.
 - Out of scope P14-a (deferred): auth, dashboard, member, topup, transactions, RBAC, QRIS/Xendit, vendor libraries (HTMX/Alpine/Chart.js).
+
+## Audit status cabang P14 (2026-11-25)
+
+Cabang P14-b dan P14-c di remote belum pernah di-merge ke `main` dan belum tercatat di dokumen ini. Hasil verifikasi:
+
+- `p14-b-cp4` (auth, rate limit, audit, sesi, dashboard): sudah berisi fitur login admin, rate limit, audit log, dan dashboard. Model `login_attempts` dan migrasi `0008` sudah ada.
+- `p14-c-cp1` (dibangun di atas `p14-b-cp4`): menambahkan daftar member, form registrasi member (service `members`, router `members`, template `admin/members/`), dan test `test_web_members.py`.
+- Hasil verifikasi pada `p14-c-cp1`: 267 test lulus. Coverage total sekitar 89,5% (gate 70%). `ruff check` dan `ruff format --check` gagal hanya karena urutan import di `tests/test_web_members.py`, dan itu sudah diperbaiki pada cabang `p14-c-members`.
+- Belum ada: detail member, edit member, manajemen kartu (Manage Card), top-up WebUI, transactions, cashier, vending, reports, settings, export. Semua ini masih menjadi sisa P14 dan P15.
+- Catatan: cabang `p14-b-cp1` sampai `p14-b-cp3` berisi commit CI sementara (`temporary verification workflow`). Workflow itu sudah dihapus pada commit terakhir masing-masing, dan tidak ikut ke `main`.
+
+## P14-c — Member list dan registrasi (verified, branch `p14-c-members`)
+
+- Tests: 267 passed. Ruff check dan format clean setelah perbaikan urutan import.
+- Lanjut berikutnya: detail member, edit member (termasuk NIK, lihat ASSUMPTIONS), dan Manage Card.

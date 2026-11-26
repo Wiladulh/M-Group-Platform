@@ -31,6 +31,7 @@ EXPECTED_TABLES = {
     "topup_requests",
     "audit_logs",
     "settings",
+    "login_attempts",
 }
 
 
@@ -93,7 +94,7 @@ def test_alembic_upgrade_head_creates_complete_schema() -> None:
         migrate(engine, "head")
         tables = set(inspect(engine).get_table_names()) - {"alembic_version"}
         assert tables == EXPECTED_TABLES
-        assert len(tables) == 19
+        assert len(tables) == 20
     finally:
         engine.dispose()
 
